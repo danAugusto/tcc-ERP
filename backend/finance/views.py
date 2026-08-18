@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .models import FinanceCategory, Lancamento
+from .permissions import IsAdministrador
 from .serializers import (
     FinanceCategorySerializer,
     LancamentoSerializer,
@@ -44,6 +45,7 @@ class CategoryListCreateView(generics.ListCreateAPIView):
 
     serializer_class = FinanceCategorySerializer
     queryset = FinanceCategory.objects.all()
+    permission_classes = [IsAdministrador]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -58,6 +60,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = FinanceCategorySerializer
     queryset = FinanceCategory.objects.all()
+    permission_classes = [IsAdministrador]
 
     def perform_destroy(self, instance):
         try:
@@ -73,6 +76,7 @@ class LancamentoListCreateView(generics.ListCreateAPIView):
 
     serializer_class = LancamentoSerializer
     queryset = Lancamento.objects.all()
+    permission_classes = [IsAdministrador]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -107,12 +111,14 @@ class LancamentoDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = LancamentoSerializer
     queryset = Lancamento.objects.all()
+    permission_classes = [IsAdministrador]
 
 
 class FinanceSummaryView(APIView):
     """Resumo financeiro com totais de receitas, despesas e saldo do periodo."""
 
     serializer_class = ResumoFinanceiroSerializer
+    permission_classes = [IsAdministrador]
 
     def get(self, request):
         inicio = _parse_date(request.query_params.get('inicio'), 'inicio')

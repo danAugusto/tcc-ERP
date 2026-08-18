@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
+from .models import Perfil
+
 
 class AuthenticationApiTests(APITestCase):
     def test_register_creates_user_without_returning_password(self):
@@ -17,6 +19,21 @@ class AuthenticationApiTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue(User.objects.filter(username='cliente_teste').exists())
         self.assertNotIn('password', response.data)
+
+    def test_register_creates_default_cliente_profile(self):
+        response = self.client.post(
+            '/api/users/register/',
+            {
+                'username': 'novo_cliente',
+                'email': 'novo@example.com',
+                'password': 'senha-segura-123',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(username='novo_cliente')
+        self.assertTrue(Perfil.objects.filter(user=user, role='cliente').exists())
 
     def test_login_returns_access_and_refresh_tokens(self):
         User.objects.create_user(

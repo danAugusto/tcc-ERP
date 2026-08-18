@@ -12,6 +12,8 @@ class FinanceApiTestCase(APITestCase):
             username='admin_teste',
             password='senha-segura-123',
         )
+        self.user.perfil.role = 'administrador'
+        self.user.perfil.save(update_fields=['role'])
         self.client.force_authenticate(user=self.user)
 
 
@@ -107,6 +109,34 @@ class CategoryApiTests(FinanceApiTestCase):
         response = self.client.get('/api/finance/categories/')
 
         self.assertEqual(response.status_code, 401)
+
+    def test_finance_endpoints_deny_non_admin(self):
+        atendente = User.objects.create_user(
+            username='atendente_teste',
+            password='senha-segura-123',
+        )
+        atendente.perfil.role = 'atendente'
+        atendente.perfil.save(update_fields=['role'])
+        self.client.force_authenticate(user=atendente)
+
+        response = self.client.get('/api/finance/categories/')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_finance_endpoints_deny_default_cliente(self):
+        cliente = User.objects.create_user(
+            username='cliente_teste',
+            password='senha-segura-123',
+        )
+        self.client.force_authenticate(user=cliente)
+
+        response = self.client.post(
+            '/api/finance/lancamentos/',
+            {},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 403)
 
 
 class LancamentoApiTests(FinanceApiTestCase):
@@ -316,3 +346,16 @@ class FinanceSummaryApiTests(FinanceApiTestCase):
         response = self.client.get('/api/finance/summary/')
 
         self.assertEqual(response.status_code, 401)
+
+    def test_summary_denies_non_admin(self):
+        cozinheiro = User.objects.create_user(
+            username='cozinheiro_teste',
+            password='senha-segura-123',
+        )
+        cozinheiro.perfil.role = 'cozinheiro'
+        cozinheiro.perfil.save(update_fields=['role'])
+        self.client.force_authenticate(user=cozinheiro)
+
+        response = self.client.get('/api/finance/summary/')
+
+        self.assertEqual(response.status_code, 403)

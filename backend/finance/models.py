@@ -53,6 +53,14 @@ class Lancamento(models.Model):
         related_name='lancamentos',
         verbose_name='responsavel',
     )
+    pedido = models.OneToOneField(
+        'orders.Pedido',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lancamento_financeiro',
+        verbose_name='pedido de origem',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

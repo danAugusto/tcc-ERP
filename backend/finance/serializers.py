@@ -25,10 +25,11 @@ class LancamentoSerializer(serializers.ModelSerializer):
             'date',
             'category',
             'responsible',
+            'pedido',
             'created_at',
             'updated_at',
         )
-        read_only_fields = ('id', 'created_at', 'updated_at', 'responsible')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'responsible', 'pedido')
 
     def validate_value(self, value):
         if value <= 0:

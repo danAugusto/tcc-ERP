@@ -1,8 +1,35 @@
 """Regras de negocio e operacoes transacionais do modulo finance."""
 
+from datetime import date
+
+from django.db import transaction
 from django.db.models import Sum
 
-from .models import Lancamento
+from .models import FinanceCategory, Lancamento
+
+
+def criar_receita_para_pedido(pedido, responsavel=None):
+    """Cria a receita de um pedido entregue, sem duplicar lancamentos."""
+    if hasattr(pedido, 'lancamento_financeiro'):
+        return pedido.lancamento_financeiro
+
+    with transaction.atomic():
+        categoria, _ = FinanceCategory.objects.get_or_create(
+            name='Vendas',
+            defaults={
+                'type': 'receita',
+                'description': 'Vendas de produtos e servicos.',
+            },
+        )
+        return Lancamento.objects.create(
+            type='receita',
+            value=pedido.total,
+            description=f'Venda - Pedido #{pedido.id}',
+            date=date.today(),
+            category=categoria,
+            pedido=pedido,
+            responsible=responsavel,
+        )
 
 
 def resumo_financeiro(inicio=None, fim=None):
