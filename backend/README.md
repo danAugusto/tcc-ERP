@@ -10,15 +10,15 @@ Tudo que envolve API, CRUD, banco, autenticação, regras de negócio e testes f
 | --- | --- |
 | Configurações globais, banco, JWT e URLs-raiz | `config/` |
 | Login, cadastro, usuários, perfis e permissões | `users/` |
-| Categorias, produtos, cardápio e futura ficha técnica | `catalog/` |
+| Produtos (mínimo) e futuro catálogo completo | `catalog/` |
 | Insumos, saldo, alertas e movimentações | Futuro app `inventory/`. |
-| Pedidos e itens de pedido | Futuro app `orders/`. |
-| Fila da cozinha, status e FIFO | Futuro app `preparation/`. |
-| Registros financeiros | Futuro app `finance/`. |
+| Pedidos e itens de pedido | `orders/` |
+| Fila da cozinha, status e FIFO | `preparation/` |
+| Registros financeiros | `finance/` |
 
 ## Estrutura de um módulo CRUD
 
-Hoje, somente `users/` e `catalog/` existem como apps Django. O `catalog/` já é o esqueleto inicial do próximo CRUD. Para os demais domínios, crie o app aprovado (`inventory`, `orders`, `preparation` ou `finance`) com `python manage.py startapp nome_do_modulo` quando a issue começar.
+Hoje, os apps `users/`, `catalog/`, `finance/`, `orders/` e `preparation/` existem. O `catalog/` contém o modelo mínimo `Product` (necessário para os itens de pedido); o catálogo completo (categorias, insumos, ficha técnica) pertence ao epic Estoque e Produtos. Para os domínios restantes, crie o app aprovado (`inventory`) com `python manage.py startapp nome_do_modulo` quando a issue começar.
 
 Em seguida, mantenha os arquivos abaixo no próprio app:
 

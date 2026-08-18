@@ -1,0 +1,1 @@
+"""App de fila de preparo dos pedidos na cozinha."""
