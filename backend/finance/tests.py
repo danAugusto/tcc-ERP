@@ -35,10 +35,10 @@ class CategoryApiTests(FinanceApiTestCase):
         response = self.client.get('/api/finance/categories/?tipo=despesa')
 
         self.assertEqual(response.status_code, 200)
-        names = [item['name'] for item in response.data]
+        names = [item['name'] for item in response.data['results']]
         self.assertIn('Impostos', names)
         self.assertNotIn('Bonus', names)
-        for item in response.data:
+        for item in response.data['results']:
             self.assertEqual(item['type'], 'despesa')
 
     def test_update_category(self):
@@ -277,8 +277,8 @@ class LancamentoApiTests(FinanceApiTestCase):
         response = self.client.get(f'/api/finance/lancamentos/?categoria={self.receita.id}')
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['category'], self.receita.id)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['category'], self.receita.id)
 
     def test_list_lancamentos_rejects_invalid_categoria_filter(self):
         response = self.client.get('/api/finance/lancamentos/?categoria=abc')
@@ -310,8 +310,8 @@ class LancamentoApiTests(FinanceApiTestCase):
         response = self.client.get(f'/api/finance/lancamentos/?pedido={pedido.id}')
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['id'], lancamento.id)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['id'], lancamento.id)
 
     def test_list_lancamentos_rejects_invalid_pedido_filter(self):
         response = self.client.get('/api/finance/lancamentos/?pedido=abc')
@@ -328,7 +328,7 @@ class LancamentoApiTests(FinanceApiTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data['results']), 2)
 
     def test_list_lancamentos_rejects_invalid_period(self):
         response = self.client.get(

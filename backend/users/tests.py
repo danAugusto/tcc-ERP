@@ -65,3 +65,22 @@ class AuthenticationApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+    def test_me_returns_authenticated_user_role(self):
+        user = User.objects.create_user(
+            username='atendente_teste', password='senha-segura-123'
+        )
+        user.perfil.role = 'atendente'
+        user.perfil.save(update_fields=['role'])
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get('/api/users/me/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['username'], 'atendente_teste')
+        self.assertEqual(response.data['role'], 'atendente')
+
+    def test_me_requires_authentication(self):
+        response = self.client.get('/api/users/me/')
+
+        self.assertEqual(response.status_code, 401)

@@ -1,5 +1,7 @@
 """Servicos da fila de preparo."""
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -7,6 +9,8 @@ from rest_framework.exceptions import ValidationError
 from orders.services import transicionar_status
 
 from .models import Preparo
+
+logger = logging.getLogger(__name__)
 
 
 def proximo_pedido(responsavel):
@@ -26,6 +30,13 @@ def proximo_pedido(responsavel):
         preparo.started_at = timezone.now()
         preparo.save(update_fields=['status', 'started_at'])
 
+    logger.info(
+        'Preparo #%s (pedido #%s) iniciado por %s',
+        preparo.id,
+        preparo.pedido_id,
+        responsavel,
+    )
+
     return preparo
 
 
@@ -39,5 +50,12 @@ def concluir_preparo(preparo, responsavel):
         preparo.status = 'pronto'
         preparo.finished_at = timezone.now()
         preparo.save(update_fields=['status', 'finished_at'])
+
+    logger.info(
+        'Preparo #%s (pedido #%s) concluido por %s',
+        preparo.id,
+        preparo.pedido_id,
+        responsavel,
+    )
 
     return preparo

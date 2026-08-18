@@ -1,10 +1,16 @@
 """Regras de negocio do modulo de pedidos."""
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from preparation.models import Preparo
+
 from .models import Pedido
+
+logger = logging.getLogger(__name__)
 
 TRANSICOES_VALIDAS = {
     'criado': {'confirmado', 'cancelado'},
@@ -47,6 +53,8 @@ def transicionar_status(pedido, novo_status, responsavel=None, motivo=None):
     """
     validar_transicao(pedido, novo_status)
 
+    status_anterior = pedido.status
+
     with transaction.atomic():
         pedido.status = novo_status
         update_fields = ['status', 'updated_at']
@@ -63,8 +71,6 @@ def transicionar_status(pedido, novo_status, responsavel=None, motivo=None):
 
         pedido.save(update_fields=update_fields)
 
-        from preparation.models import Preparo
-
         if novo_status == 'confirmado':
             Preparo.objects.get_or_create(
                 pedido=pedido, defaults={'status': 'pendente'}
@@ -76,5 +82,14 @@ def transicionar_status(pedido, novo_status, responsavel=None, motivo=None):
             from finance.services import criar_receita_para_pedido
 
             criar_receita_para_pedido(pedido, responsavel=responsavel)
+
+    logger.info(
+        'Pedido #%s: %s -> %s por %s%s',
+        pedido.id,
+        status_anterior,
+        novo_status,
+        responsavel or 'sistema',
+        f' (motivo: {motivo})' if motivo else '',
+    )
 
     return pedido

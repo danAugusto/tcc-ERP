@@ -1,9 +1,8 @@
 """Regras de negocio e operacoes transacionais do modulo finance."""
 
-from datetime import date
-
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from .models import FinanceCategory, Lancamento
 
@@ -25,10 +24,11 @@ def criar_receita_para_pedido(pedido, responsavel=None):
             type='receita',
             value=pedido.total,
             description=f'Venda - Pedido #{pedido.id}',
-            date=date.today(),
+            date=timezone.localdate(),
             category=categoria,
             pedido=pedido,
             responsible=responsavel,
+            payment_method=pedido.payment_method,
         )
 
 

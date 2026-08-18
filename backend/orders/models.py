@@ -3,6 +3,8 @@
 from django.conf import settings
 from django.db import models
 
+from finance.models import PAYMENT_CHOICES
+
 
 class Pedido(models.Model):
     """Pedido com fluxo de status que integra ao financeiro e a fila de preparo."""
@@ -36,6 +38,13 @@ class Pedido(models.Model):
         default=0,
         verbose_name='total',
     )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        blank=True,
+        default='outros',
+        verbose_name='forma de pagamento',
+    )
     confirmed_at = models.DateTimeField(
         null=True, blank=True, verbose_name='confirmado em'
     )
@@ -57,7 +66,7 @@ class Pedido(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at', '-id']
         verbose_name = 'pedido'
         verbose_name_plural = 'pedidos'
 

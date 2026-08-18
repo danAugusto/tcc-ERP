@@ -1,7 +1,7 @@
 # Pedidos, Fila FIFO e Preparo — regras e registro de implementação
 
 **Data:** 18 de agosto de 2026
-**Status:** Tasks 01 a 08 concluídas
+**Status:** Tasks 01 a 08 concluídas; melhorias de robustez aplicadas
 **Responsável:** Equipe do TCC
 
 ## Task 01 — Regras de pedidos, status e fila FIFO
@@ -50,6 +50,21 @@
 
 \* A baixa de estoque pertence ao epic Estoque e Produtos (#12) e será conectada quando o módulo `inventory` existir.
 
+## Melhorias aplicadas (refino pós-entrega)
+
+- **Total do pedido via signal:** `ItemPedido` recalcula o total do `Pedido` automaticamente em `post_save`/`post_delete` (arquivo `orders/signals.py`), eliminando chamadas manuais; criação/alteração de pedidos agora é atômica.
+- **Forma de pagamento:** o `Pedido` passou a registrar `payment_method` (fonte única de choices em `finance/models.py`). A receita gerada na entrega herda a forma de pagamento escolhida no pedido.
+- **Data de registro:** receitas usam `timezone.localdate()` em vez de `date.today()` (consistente com `USE_TZ`).
+- **Endpoint `GET /api/users/me/`:** retorna o usuário autenticado com seu perfil de acesso (`role`), útil para o frontend definir permissões de interface.
+- **Paginação:** listas da API (pedidos, fila, categorias, lançamentos, produtos) usam paginação padrão (20 por página, `results`/`next`/`previous`/`count`).
+- **Logging:** transições de status, chamadas de `next/` e conclusão de preparo emitem logs de informação.
+- **DRY no financeiro:** validação de período (`inicio`/`fim`) extraída para `_validar_periodo` e reutilizada em lançamentos e resumo.
+
+## Limitações conhecidas
+
+- **Concorrência em `next/`:** sem `select_for_update` na fila. Como a transição atômica valida o status anterior, dois cozinheiros chamando `next/` ao mesmo tempo não corrompem dados (o segundo recebe 400); se necessário, adicionar bloqueio pessimista no epic de filas.
+- **Itens de pedido:** só podem ser adicionados/removidos enquanto o pedido está `criado`; edição granular de itens em pedidos confirmados permanece como melhoria futura.
+
 ## Dependência criada: catálogo mínimo
 
 - Para validar produtos nos itens, foi criado o modelo mínimo `catalog.Product` (nome, preço, disponível).
@@ -93,7 +108,7 @@ Todos exigem token JWT válido.
 ```powershell
 python manage.py check
 python manage.py makemigrations --check --dry-run
-python manage.py test   # 66 testes
+python manage.py test   # 70 testes
 ```
 
 ## Pendências futuras (fora deste epic)

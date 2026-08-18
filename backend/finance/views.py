@@ -40,6 +40,17 @@ def _parse_id(value, name):
         raise ValidationError({name: f'{name.capitalize()} invalido.'})
 
 
+def _validar_periodo(request):
+    """Extrai e valida os parametros de periodo (inicio/fim) da requisicao."""
+    inicio = _parse_date(request.query_params.get('inicio'), 'inicio')
+    fim = _parse_date(request.query_params.get('fim'), 'fim')
+    if inicio and fim and fim < inicio:
+        raise ValidationError(
+            {'fim': 'A data final deve ser maior ou igual a data inicial.'}
+        )
+    return inicio, fim
+
+
 class CategoryListCreateView(generics.ListCreateAPIView):
     """Lista ou cria categorias financeiras, opcionalmente por tipo."""
 
@@ -95,12 +106,7 @@ class LancamentoListCreateView(generics.ListCreateAPIView):
         if pedido:
             queryset = queryset.filter(pedido_id=_parse_id(pedido, 'pedido'))
 
-        inicio = _parse_date(self.request.query_params.get('inicio'), 'inicio')
-        fim = _parse_date(self.request.query_params.get('fim'), 'fim')
-        if inicio and fim and fim < inicio:
-            raise ValidationError(
-                {'fim': 'A data final deve ser maior ou igual a data inicial.'}
-            )
+        inicio, fim = _validar_periodo(self.request)
         if inicio:
             queryset = queryset.filter(date__gte=inicio)
         if fim:
@@ -127,12 +133,7 @@ class FinanceSummaryView(APIView):
     permission_classes = [IsAdministrador]
 
     def get(self, request):
-        inicio = _parse_date(request.query_params.get('inicio'), 'inicio')
-        fim = _parse_date(request.query_params.get('fim'), 'fim')
-        if inicio and fim and fim < inicio:
-            raise ValidationError(
-                {'fim': 'A data final deve ser maior ou igual a data inicial.'}
-            )
+        inicio, fim = _validar_periodo(request)
         resumo = resumo_financeiro(inicio=inicio, fim=fim)
         serializer = self.serializer_class(resumo)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -14,3 +14,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class MeSerializer(serializers.ModelSerializer):
+    """Serializer do usuario autenticado com seu perfil de acesso."""
+
+    role = serializers.CharField(source='perfil.role', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'role')
+        read_only_fields = fields

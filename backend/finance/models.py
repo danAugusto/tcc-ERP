@@ -6,6 +6,14 @@ TYPE_CHOICES = [
     ('despesa', 'Despesa'),
 ]
 
+PAYMENT_CHOICES = [
+    ('dinheiro', 'Dinheiro'),
+    ('cartao_debito', 'Cartao de debito'),
+    ('cartao_credito', 'Cartao de credito'),
+    ('pix', 'Pix'),
+    ('outros', 'Outros'),
+]
+
 
 class FinanceCategory(models.Model):
     """Categoria financeira que organiza lancamentos por tipo."""
@@ -27,14 +35,6 @@ class FinanceCategory(models.Model):
 
 class Lancamento(models.Model):
     """Lancamento financeiro de receita ou despesa."""
-
-    PAYMENT_CHOICES = [
-        ('dinheiro', 'Dinheiro'),
-        ('cartao_debito', 'Cartao de debito'),
-        ('cartao_credito', 'Cartao de credito'),
-        ('pix', 'Pix'),
-        ('outros', 'Outros'),
-    ]
 
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name='tipo')
     value = models.DecimalField(

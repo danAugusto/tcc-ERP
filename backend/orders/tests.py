@@ -108,6 +108,19 @@ class PedidoCreateTests(PedidoBaseTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['cliente'], self.cliente.id)
 
+    def test_create_pedido_registra_forma_de_pagamento(self):
+        payload = self._pedido_payload(self.product)
+        payload['payment_method'] = 'pix'
+
+        response = self.client.post(
+            reverse('orders:pedido_list_create'),
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['payment_method'], 'pix')
+
     def test_equipe_cria_pedido_para_cliente(self):
         atendente = self._create_user('atendente_teste', role='atendente')
         self.client.force_authenticate(user=atendente)
@@ -144,7 +157,7 @@ class PedidoVisibilityTests(PedidoBaseTestCase):
         response = self.client.get(reverse('orders:pedido_list_create'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data['results']), 1)
 
     def test_equipe_ve_todos_os_pedidos(self):
         self._create_pedido_como(self.cliente_a)
@@ -155,7 +168,7 @@ class PedidoVisibilityTests(PedidoBaseTestCase):
         response = self.client.get(reverse('orders:pedido_list_create'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data['results']), 2)
 
     def test_cliente_nao_acessa_pedido_de_outro(self):
         created = self._create_pedido_como(self.cliente_a)
@@ -299,6 +312,25 @@ class PedidoFinanceIntegrationTests(PedidoBaseTestCase):
         self.assertEqual(lancamento.type, 'receita')
         self.assertEqual(lancamento.value, 30.00)
         self.assertEqual(lancamento.pedido_id, created.data['id'])
+
+    def test_receita_usa_forma_de_pagamento_do_pedido(self):
+        payload = self._pedido_payload(self.product)
+        payload['payment_method'] = 'cartao_credito'
+        created = self.client.post(
+            reverse('orders:pedido_list_create'),
+            payload,
+            format='json',
+        )
+        pedido = Pedido.objects.get(id=created.data['id'])
+        for status in ('confirmado', 'em_preparo', 'pronto', 'entregue'):
+            self.client.patch(
+                self._pedido_url(pedido.id),
+                {'status': status},
+                format='json',
+            )
+
+        lancamento = Lancamento.objects.get()
+        self.assertEqual(lancamento.payment_method, 'cartao_credito')
 
     def test_receita_nao_duplica(self):
         self._entregar_pedido()

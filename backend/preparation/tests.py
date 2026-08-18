@@ -63,7 +63,7 @@ class PreparoQueueTests(PreparoBaseTestCase):
         response = self.client.get(reverse('preparation:preparo_queue'))
 
         self.assertEqual(response.status_code, 200)
-        ids = [item['pedido_id'] for item in response.data]
+        ids = [item['pedido_id'] for item in response.data['results']]
         self.assertEqual(ids, [first.id, second.id])
 
     def test_fila_nao_lista_cancelados(self):
@@ -80,7 +80,7 @@ class PreparoQueueTests(PreparoBaseTestCase):
         response = self.client.get(reverse('preparation:preparo_queue'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data, [])
+        self.assertEqual(response.data['results'], [])
 
 
 class PreparoOperationsTests(PreparoBaseTestCase):
@@ -140,4 +140,4 @@ class PreparoOperationsTests(PreparoBaseTestCase):
         response = self.client.get(reverse('preparation:preparo_queue'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data['results']), 1)

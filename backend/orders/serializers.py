@@ -1,10 +1,11 @@
 """Serializers do modulo de pedidos."""
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import ItemPedido, Pedido
-from .services import recalcular_total, validar_transicao
+from .services import validar_transicao
 
 User = get_user_model()
 
@@ -46,6 +47,7 @@ class PedidoSerializer(serializers.ModelSerializer):
             'cliente',
             'itens',
             'total',
+            'payment_method',
             'confirmed_at',
             'cancelled_at',
             'cancelled_by',
@@ -101,21 +103,21 @@ class PedidoSerializer(serializers.ModelSerializer):
                 {'itens': 'Um pedido deve ter pelo menos um item.'}
             )
 
-        pedido = Pedido.objects.create(cliente=cliente, **validated_data)
-        self._build_itens(pedido, itens_data)
-        recalcular_total(pedido)
+        with transaction.atomic():
+            pedido = Pedido.objects.create(cliente=cliente, **validated_data)
+            self._build_itens(pedido, itens_data)
         return pedido
 
     def update(self, instance, validated_data):
         itens_data = validated_data.pop('itens', None)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        if itens_data is not None:
-            instance.itens.all().delete()
-            self._build_itens(instance, itens_data)
-            recalcular_total(instance)
+            if itens_data is not None:
+                instance.itens.all().delete()
+                self._build_itens(instance, itens_data)
 
         return instance
