@@ -80,6 +80,11 @@ class CategoryApiTests(FinanceApiTestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_list_categories_rejects_invalid_tipo_filter(self):
+        response = self.client.get('/api/finance/categories/?tipo=invalido')
+
+        self.assertEqual(response.status_code, 400)
+
     def test_delete_category_in_use_rejected(self):
         category = FinanceCategory.objects.create(name='Bonus', type='receita')
         Lancamento.objects.create(
@@ -157,6 +162,83 @@ class LancamentoApiTests(FinanceApiTestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def _create_lancamento(self, category, value, lancamento_date):
+        return Lancamento.objects.create(
+            type=category.type,
+            value=value,
+            description='Lancamento',
+            date=lancamento_date,
+            category=category,
+            responsible=self.user,
+        )
+
+    def test_responsible_cannot_be_changed_by_client(self):
+        lancamento = self._create_lancamento(self.receita, '100.00', date(2026, 8, 1))
+        outro_usuario = User.objects.create_user(
+            username='outro_teste',
+            password='senha-segura-123',
+        )
+
+        response = self.client.patch(
+            f'/api/finance/lancamentos/{lancamento.id}/',
+            {'responsible': outro_usuario.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        lancamento.refresh_from_db()
+        self.assertEqual(lancamento.responsible, self.user)
+
+    def test_patch_type_without_category_rejected(self):
+        lancamento = self._create_lancamento(self.receita, '100.00', date(2026, 8, 1))
+
+        response = self.client.patch(
+            f'/api/finance/lancamentos/{lancamento.id}/',
+            {'type': 'despesa'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_list_lancamentos_rejects_invalid_tipo_filter(self):
+        response = self.client.get('/api/finance/lancamentos/?tipo=invalido')
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_list_lancamentos_filters_by_category(self):
+        self._create_lancamento(self.receita, '100.00', date(2026, 8, 1))
+        self._create_lancamento(self.despesa, '50.00', date(2026, 8, 2))
+
+        response = self.client.get(f'/api/finance/lancamentos/?categoria={self.receita.id}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['category'], self.receita.id)
+
+    def test_list_lancamentos_rejects_invalid_categoria_filter(self):
+        response = self.client.get('/api/finance/lancamentos/?categoria=abc')
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_list_lancamentos_filters_by_period(self):
+        self._create_lancamento(self.receita, '100.00', date(2026, 8, 1))
+        self._create_lancamento(self.receita, '50.00', date(2026, 8, 15))
+        self._create_lancamento(self.receita, '30.00', date(2026, 9, 1))
+
+        response = self.client.get(
+            '/api/finance/lancamentos/?inicio=2026-08-01&fim=2026-08-31'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 2)
+
+    def test_list_lancamentos_rejects_invalid_period(self):
+        response = self.client.get(
+            '/api/finance/lancamentos/?inicio=2026-08-31&fim=2026-08-01'
+        )
+
+        self.assertEqual(response.status_code, 400)
+
 
 class FinanceSummaryApiTests(FinanceApiTestCase):
     def setUp(self):
@@ -218,6 +300,13 @@ class FinanceSummaryApiTests(FinanceApiTestCase):
 
     def test_summary_rejects_invalid_date(self):
         response = self.client.get('/api/finance/summary/?inicio=invalido')
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_summary_rejects_inverted_period(self):
+        response = self.client.get(
+            '/api/finance/summary/?inicio=2026-08-31&fim=2026-08-01'
+        )
 
         self.assertEqual(response.status_code, 400)
 

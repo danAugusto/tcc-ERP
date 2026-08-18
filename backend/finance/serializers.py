@@ -28,7 +28,7 @@ class LancamentoSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         )
-        read_only_fields = ('id', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'responsible')
 
     def validate_value(self, value):
         if value <= 0:
@@ -36,8 +36,8 @@ class LancamentoSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        category = attrs.get('category')
-        lancamento_type = attrs.get('type')
+        category = attrs.get('category') or getattr(self.instance, 'category', None)
+        lancamento_type = attrs.get('type') or getattr(self.instance, 'type', None)
         if category and lancamento_type and category.type != lancamento_type:
             raise serializers.ValidationError(
                 'A categoria deve ser do mesmo tipo do lancamento.'
