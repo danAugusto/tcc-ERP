@@ -162,6 +162,41 @@ class LancamentoApiTests(FinanceApiTestCase):
         lancamento = Lancamento.objects.get()
         self.assertEqual(lancamento.responsible, self.user)
 
+    def test_create_lancamento_with_payment_method(self):
+        response = self.client.post(
+            '/api/finance/lancamentos/',
+            {
+                'type': 'despesa',
+                'value': '80.00',
+                'description': 'Compra de insumos',
+                'date': '2026-08-18',
+                'category': self.despesa.id,
+                'payment_method': 'pix',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        lancamento = Lancamento.objects.get()
+        self.assertEqual(lancamento.payment_method, 'pix')
+
+    def test_lancamento_defaults_payment_method(self):
+        response = self.client.post(
+            '/api/finance/lancamentos/',
+            {
+                'type': 'receita',
+                'value': '10.00',
+                'description': 'Outra venda',
+                'date': '2026-08-18',
+                'category': self.receita.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        lancamento = Lancamento.objects.get()
+        self.assertEqual(lancamento.payment_method, 'outros')
+
     def test_lancamento_with_non_positive_value_rejected(self):
         response = self.client.post(
             '/api/finance/lancamentos/',
@@ -247,6 +282,39 @@ class LancamentoApiTests(FinanceApiTestCase):
 
     def test_list_lancamentos_rejects_invalid_categoria_filter(self):
         response = self.client.get('/api/finance/lancamentos/?categoria=abc')
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_list_lancamentos_filters_by_pedido(self):
+        from orders.models import Pedido
+
+        pedido = Pedido.objects.create(status='entregue', total='100.00')
+        lancamento = Lancamento.objects.create(
+            type='receita',
+            value='100.00',
+            description='Venda - Pedido',
+            date=date(2026, 8, 1),
+            category=self.receita,
+            responsible=self.user,
+            pedido=pedido,
+        )
+        Lancamento.objects.create(
+            type='despesa',
+            value='30.00',
+            description='Outro lancamento',
+            date=date(2026, 8, 2),
+            category=self.despesa,
+            responsible=self.user,
+        )
+
+        response = self.client.get(f'/api/finance/lancamentos/?pedido={pedido.id}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['id'], lancamento.id)
+
+    def test_list_lancamentos_rejects_invalid_pedido_filter(self):
+        response = self.client.get('/api/finance/lancamentos/?pedido=abc')
 
         self.assertEqual(response.status_code, 400)
 

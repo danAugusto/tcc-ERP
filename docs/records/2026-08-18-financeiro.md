@@ -13,8 +13,8 @@
 
 ### Formas de pagamento
 
-- Decisão inicial: os lançamentos financeiros registram o valor e a data, sem exigir forma de pagamento nesta etapa.
-- Formas de pagamento (dinheiro, cartão, pix) ficam registradas para definição junto ao módulo de pedidos completo.
+- Formas de pagamento disponíveis no lançamento: dinheiro, cartão de débito, cartão de crédito, pix e outros.
+- Campo `payment_method` é opcional (padrão `outros`); receitas geradas de pedidos usam o padrão até o pedido registrar a forma.
 
 ### Quando uma venda vira receita
 
@@ -44,7 +44,7 @@
 | 06 — Consultas e filtros | Filtros por tipo, período e categoria na listagem de lançamentos; vínculo com o pedido de origem. | Concluída |
 | 07 — Resumo financeiro | Rota `summary/` com totais de receitas, despesas e saldo por período. | Concluída |
 | 08 — Permissões e auditoria | Apenas administradores acessam o financeiro; responsável registrado automaticamente e não alterável pela API. | Concluída |
-| 09 — Testes, revisão e documentação | 45 testes (CRUD, validações, filtros, resumo, integração, permissões); este registro. | Concluída |
+| 09 — Testes, revisão e documentação | 49 testes (CRUD, validações, filtros, resumo, integração, permissões); este registro. | Concluída |
 
 ## Módulos de apoio criados
 
@@ -65,7 +65,7 @@
 # Financeiro (somente administradores)
 GET/POST   /api/finance/categories/?tipo=receita|despesa
 GET/PATCH/DELETE /api/finance/categories/<id>/
-GET/POST   /api/finance/lancamentos/?tipo=&categoria=&inicio=AAAA-MM-DD&fim=AAAA-MM-DD
+GET/POST   /api/finance/lancamentos/?tipo=&categoria=&pedido=&inicio=AAAA-MM-DD&fim=AAAA-MM-DD
 GET/PATCH/DELETE /api/finance/lancamentos/<id>/
 GET        /api/finance/summary/?inicio=AAAA-MM-DD&fim=AAAA-MM-DD
 
@@ -92,11 +92,11 @@ Todos exigem token JWT válido.
 ```powershell
 python manage.py check
 python manage.py makemigrations --check --dry-run
-python manage.py test   # 45 testes
+python manage.py test   # 49 testes
 ```
 
 ## Pendências futuras (fora do escopo financeiro)
 
 1. Módulo `orders` completo: itens de pedido, ficha técnica e baixa de estoque.
-2. Formas de pagamento e relatórios operacionais.
+2. Relatórios operacionais e formas de pagamento por pedido.
 3. Frontend para consumo da API.

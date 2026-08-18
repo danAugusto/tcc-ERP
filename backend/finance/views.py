@@ -33,11 +33,11 @@ def _parse_date(value, name):
         raise ValidationError({name: 'Data invalida. Use o formato AAAA-MM-DD.'})
 
 
-def _parse_categoria(value):
+def _parse_id(value, name):
     try:
         return int(value)
     except (TypeError, ValueError):
-        raise ValidationError({'categoria': 'Categoria invalida.'})
+        raise ValidationError({name: f'{name.capitalize()} invalido.'})
 
 
 class CategoryListCreateView(generics.ListCreateAPIView):
@@ -87,7 +87,13 @@ class LancamentoListCreateView(generics.ListCreateAPIView):
 
         categoria = self.request.query_params.get('categoria')
         if categoria:
-            queryset = queryset.filter(category_id=_parse_categoria(categoria))
+            queryset = queryset.filter(
+                category_id=_parse_id(categoria, 'categoria')
+            )
+
+        pedido = self.request.query_params.get('pedido')
+        if pedido:
+            queryset = queryset.filter(pedido_id=_parse_id(pedido, 'pedido'))
 
         inicio = _parse_date(self.request.query_params.get('inicio'), 'inicio')
         fim = _parse_date(self.request.query_params.get('fim'), 'fim')

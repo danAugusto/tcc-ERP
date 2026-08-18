@@ -23,6 +23,7 @@ class LancamentoSerializer(serializers.ModelSerializer):
             'value',
             'description',
             'date',
+            'payment_method',
             'category',
             'responsible',
             'pedido',

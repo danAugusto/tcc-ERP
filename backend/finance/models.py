@@ -33,12 +33,27 @@ class Lancamento(models.Model):
         ('despesa', 'Despesa'),
     ]
 
+    PAYMENT_CHOICES = [
+        ('dinheiro', 'Dinheiro'),
+        ('cartao_debito', 'Cartao de debito'),
+        ('cartao_credito', 'Cartao de credito'),
+        ('pix', 'Pix'),
+        ('outros', 'Outros'),
+    ]
+
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name='tipo')
     value = models.DecimalField(
         max_digits=12, decimal_places=2, verbose_name='valor'
     )
     description = models.TextField(verbose_name='descricao')
     date = models.DateField(verbose_name='data')
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        blank=True,
+        default='outros',
+        verbose_name='forma de pagamento',
+    )
     category = models.ForeignKey(
         FinanceCategory,
         on_delete=models.PROTECT,
