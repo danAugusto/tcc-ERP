@@ -9,11 +9,6 @@ def backfill_perfis(apps, schema_editor):
         Perfil.objects.get_or_create(user_id=user.id)
 
 
-def remove_perfis(apps, schema_editor):
-    Perfil = apps.get_model('users', 'Perfil')
-    Perfil.objects.all().delete()
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -21,5 +16,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(backfill_perfis, remove_perfis),
+        migrations.RunPython(backfill_perfis, migrations.RunPython.noop),
     ]

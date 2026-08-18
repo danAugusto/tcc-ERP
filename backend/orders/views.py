@@ -3,6 +3,7 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Pedido
 from .serializers import PedidoSerializer
+from .services import transicionar_status
 
 
 class PedidoListCreateView(generics.ListCreateAPIView):
@@ -19,11 +20,15 @@ class PedidoDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Pedido.objects.all()
 
     def perform_update(self, serializer):
-        instance = serializer.save()
-        if instance.status == 'entregue':
-            from finance.services import criar_receita_para_pedido
-
-            criar_receita_para_pedido(instance, responsavel=self.request.user)
+        novo_status = serializer.validated_data.get('status')
+        if novo_status and novo_status != serializer.instance.status:
+            transicionar_status(
+                serializer.instance,
+                novo_status,
+                responsavel=self.request.user,
+            )
+        else:
+            serializer.save()
 
     def perform_destroy(self, instance):
         if instance.status == 'entregue':

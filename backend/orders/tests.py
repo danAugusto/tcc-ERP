@@ -1,6 +1,5 @@
-from datetime import date
-
 from django.contrib.auth.models import User
+from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from finance.models import Lancamento
@@ -17,10 +16,13 @@ class PedidoApiTestCase(APITestCase):
 
     def _create_pedido(self, total='100.00'):
         return self.client.post(
-            '/api/orders/',
+            reverse('orders:pedido_list_create'),
             {'total': total},
             format='json',
         )
+
+    def _pedido_detail_url(self, pedido_id):
+        return reverse('orders:pedido_detail', kwargs={'pk': pedido_id})
 
 
 class PedidoApiTests(PedidoApiTestCase):
@@ -39,7 +41,7 @@ class PedidoApiTests(PedidoApiTestCase):
         self._create_pedido()
         self._create_pedido(total='50.00')
 
-        response = self.client.get('/api/orders/')
+        response = self.client.get(reverse('orders:pedido_list_create'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 2)
@@ -47,7 +49,7 @@ class PedidoApiTests(PedidoApiTestCase):
     def test_retrieve_pedido(self):
         created = self._create_pedido()
 
-        response = self.client.get(f"/api/orders/{created.data['id']}/")
+        response = self.client.get(self._pedido_detail_url(created.data['id']))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['total'], '100.00')
@@ -56,7 +58,7 @@ class PedidoApiTests(PedidoApiTestCase):
         created = self._create_pedido()
 
         response = self.client.patch(
-            f"/api/orders/{created.data['id']}/",
+            self._pedido_detail_url(created.data['id']),
             {'status': 'confirmado'},
             format='json',
         )
@@ -68,7 +70,7 @@ class PedidoApiTests(PedidoApiTestCase):
         created = self._create_pedido()
 
         response = self.client.patch(
-            f"/api/orders/{created.data['id']}/",
+            self._pedido_detail_url(created.data['id']),
             {'status': 'entregue'},
             format='json',
         )
@@ -79,7 +81,7 @@ class PedidoApiTests(PedidoApiTestCase):
         created = self._create_pedido()
 
         response = self.client.patch(
-            f"/api/orders/{created.data['id']}/",
+            self._pedido_detail_url(created.data['id']),
             {'status': 'cancelado'},
             format='json',
         )
@@ -91,7 +93,7 @@ class PedidoApiTests(PedidoApiTestCase):
     def test_delete_pedido_criado(self):
         created = self._create_pedido()
 
-        response = self.client.delete(f"/api/orders/{created.data['id']}/")
+        response = self.client.delete(self._pedido_detail_url(created.data['id']))
 
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Pedido.objects.exists())
@@ -102,7 +104,7 @@ class PedidoApiTests(PedidoApiTestCase):
         pedido.status = 'entregue'
         pedido.save(update_fields=['status'])
 
-        response = self.client.delete(f"/api/orders/{created.data['id']}/")
+        response = self.client.delete(self._pedido_detail_url(created.data['id']))
 
         self.assertEqual(response.status_code, 400)
 
@@ -114,7 +116,7 @@ class PedidoFinanceIntegrationTests(PedidoApiTestCase):
         pedido.status = 'pronto'
         pedido.save(update_fields=['status'])
         response = self.client.patch(
-            f"/api/orders/{created.data['id']}/",
+            self._pedido_detail_url(created.data['id']),
             {'status': 'entregue'},
             format='json',
         )
@@ -151,7 +153,7 @@ class PedidoFinanceIntegrationTests(PedidoApiTestCase):
         self._deliver_pedido(total='150.00')
 
         self.client.force_authenticate(user=admin)
-        response = self.client.get('/api/finance/summary/')
+        response = self.client.get(reverse('finance_summary'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['total_receitas'], '150.00')

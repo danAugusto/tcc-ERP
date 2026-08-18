@@ -1,14 +1,14 @@
 from django.conf import settings
 from django.db import models
 
+TYPE_CHOICES = [
+    ('receita', 'Receita'),
+    ('despesa', 'Despesa'),
+]
+
 
 class FinanceCategory(models.Model):
     """Categoria financeira que organiza lancamentos por tipo."""
-
-    TYPE_CHOICES = [
-        ('receita', 'Receita'),
-        ('despesa', 'Despesa'),
-    ]
 
     name = models.CharField(max_length=100, unique=True, verbose_name='nome')
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name='tipo')
@@ -27,11 +27,6 @@ class FinanceCategory(models.Model):
 
 class Lancamento(models.Model):
     """Lancamento financeiro de receita ou despesa."""
-
-    TYPE_CHOICES = [
-        ('receita', 'Receita'),
-        ('despesa', 'Despesa'),
-    ]
 
     PAYMENT_CHOICES = [
         ('dinheiro', 'Dinheiro'),

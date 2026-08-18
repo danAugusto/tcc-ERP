@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .models import FinanceCategory, Lancamento
+from .models import TYPE_CHOICES, FinanceCategory, Lancamento
 from .permissions import IsAdministrador
 from .serializers import (
     FinanceCategorySerializer,
@@ -15,7 +15,7 @@ from .serializers import (
 )
 from .services import resumo_financeiro
 
-TIPO_CHOICES = dict(Lancamento.TYPE_CHOICES)
+TIPO_CHOICES = dict(TYPE_CHOICES)
 
 
 def _validate_tipo(tipo):
