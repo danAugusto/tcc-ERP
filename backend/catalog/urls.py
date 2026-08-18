@@ -1,6 +1,12 @@
-"""URL namespace reserved for catalog endpoints.
+"""URLs do modulo de catalogo."""
 
-Future routes for categories, products and the public menu belong here.
-"""
+from django.urls import path
 
-urlpatterns = []
+from .views import ProductDetailView, ProductListCreateView
+
+app_name = 'catalog'
+
+urlpatterns = [
+    path('products/', ProductListCreateView.as_view(), name='product_list_create'),
+    path('products/<int:pk>/', ProductDetailView.as_view(), name='product_detail'),
+]

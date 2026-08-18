@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'catalog',
     'finance',
     'orders',
+    'preparation',
 ]
 
 MIDDLEWARE = [
