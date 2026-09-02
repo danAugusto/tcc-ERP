@@ -1,8 +1,11 @@
-"""URL namespace reserved for catalog endpoints.
+"""Catalog API routes."""
 
-Future routes for categories, products and the public menu belong here.
-"""
+from rest_framework.routers import DefaultRouter
 
-from django.urls import path
+from .views import CategoriaViewSet, ProdutoViewSet
 
-urlpatterns = []
+router = DefaultRouter()
+router.register('categorias', CategoriaViewSet, basename='categoria')
+router.register('produtos', ProdutoViewSet, basename='produto')
+
+urlpatterns = router.urls
