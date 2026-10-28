@@ -91,9 +91,9 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   // Tela de carregamento suave (ou bloqueio enquanto o redirecionamento acontece)
   if ((isLoading && !isPublic) || (redirectTo && !isPublic)) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-950 text-zinc-400">
+      <div className="flex h-dvh w-screen items-center justify-center bg-canvas text-soft">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="h-6 w-6 animate-spin text-yellow-400" />
+          <RefreshCw className="h-6 w-6 animate-spin text-accent" />
           <span className="text-xs font-semibold">Carregando ambiente seguro...</span>
         </div>
       </div>

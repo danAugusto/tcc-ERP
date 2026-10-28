@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import { mutate } from "swr"
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
@@ -52,13 +54,7 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
       onClose()
     } catch (err: any) {
       console.error("Erro ao salvar insumo:", err)
-      const data = err.response?.data
-      let message = "Erro ao salvar insumo. Verifique os valores."
-      if (typeof data === "object" && data !== null) {
-        message = Object.entries(data)
-          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
-          .join(" | ")
-      }
+      const message = apiErrorMessage(err, "Não foi possível salvar o insumo. Confira os valores.")
       setErrorMsg(message)
     } finally {
       setLoading(false)
@@ -66,21 +62,21 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <h2 className="text-lg font-bold text-zinc-100 mb-4">
-          {insumoToEdit ? "Editar Insumo" : "Novo Insumo / Matéria-Prima"}
+    <Dialog label={insumoToEdit ? "Editar insumo" : "Novo insumo"} onClose={onClose}>
+      <div className="w-full max-w-md rounded-3xl bg-surface border border-line p-6 shadow-2xl   duration-200">
+        <h2 className="text-3xl text-ink">
+          {insumoToEdit ? "Editar insumo" : "Novo Insumo / Matéria-Prima"}
         </h2>
 
         {errorMsg && (
-          <div className="mb-4 rounded-xl bg-red-500/10 p-3 text-xs text-red-400 border border-red-500/20">
+          <div className="mb-4 rounded-xl bg-danger/10 p-3 text-xs text-danger border border-danger/20">
             {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label htmlFor="f-appinventorycomponentsInsumoForm-2" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appinventorycomponentsInsumoForm-2" className="mb-1.5 block text-sm font-semibold text-ink">
               Nome do Insumo
             </label>
             <Input id="f-appinventorycomponentsInsumoForm-2"
@@ -93,11 +89,11 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="f-appinventorycomponentsInsumoForm-1" className="mb-1.5 block font-semibold text-zinc-300">
+              <label htmlFor="f-appinventorycomponentsInsumoForm-1" className="mb-1.5 block text-sm font-semibold text-ink">
                 Unidade de Medida
               </label>
               <select id="f-appinventorycomponentsInsumoForm-1"
-                className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:border-yellow-400"
+                className="flex h-10 w-full rounded-xl border border-line bg-canvas px-3 py-2 text-sm text-ink  focus-visible:outline-none focus-visible:border-accent"
                 value={unidadeMedida}
                 onChange={(e) => setUnidadeMedida(e.target.value.toUpperCase())}
               >
@@ -110,7 +106,7 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
             </div>
 
             <div>
-              <label htmlFor="f-appinventorycomponentsInsumoForm-3" className="mb-1.5 block font-semibold text-zinc-300">
+              <label htmlFor="f-appinventorycomponentsInsumoForm-3" className="mb-1.5 block text-sm font-semibold text-ink">
                 Estoque Mínimo Ideal
               </label>
               <Input id="f-appinventorycomponentsInsumoForm-3"
@@ -125,7 +121,7 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
           </div>
 
           <div>
-            <label htmlFor="f-appinventorycomponentsInsumoForm-4" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appinventorycomponentsInsumoForm-4" className="mb-1.5 block text-sm font-semibold text-ink">
               Quantidade Inicial em Estoque
             </label>
             <Input id="f-appinventorycomponentsInsumoForm-4"
@@ -138,22 +134,22 @@ export function InsumoForm({ onClose, insumoToEdit }: InsumoFormProps) {
             />
           </div>
 
-          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-zinc-800">
+          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-line">
             <Button
               variant="outline"
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              className="border-line text-soft hover:text-ink"
             >
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : insumoToEdit ? "Salvar Alterações" : "Cadastrar Insumo"}
+              {loading ? "Salvando..." : insumoToEdit ? "Salvar alterações" : "Cadastrar insumo"}
             </Button>
           </div>
         </form>
       </div>
-    </div>
+    </Dialog>
   )
 }

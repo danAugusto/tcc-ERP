@@ -34,9 +34,9 @@ export function askConfirm(message: string): Promise<boolean> {
 }
 
 const styles: Record<Kind, { icon: typeof Info; cls: string }> = {
-  success: { icon: CheckCircle2, cls: "border-emerald-500/40 text-emerald-300" },
-  error: { icon: XCircle, cls: "border-red-500/40 text-red-300" },
-  info: { icon: Info, cls: "border-zinc-600 text-zinc-200" },
+  success: { icon: CheckCircle2, cls: "border-success/40 text-success" },
+  error: { icon: XCircle, cls: "border-danger/40 text-danger" },
+  info: { icon: Info, cls: "border-line text-ink" },
 };
 
 export function FeedbackHost() {
@@ -78,10 +78,10 @@ export function FeedbackHost() {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border bg-zinc-900 px-4 py-3 text-sm shadow-lg sm:w-auto ${cls}`}
+              className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border bg-surface px-4 py-3 text-sm  sm:w-auto ${cls}`}
             >
               <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span className="text-zinc-100">{t.message}</span>
+              <span className="text-ink">{t.message}</span>
             </div>
           );
         })}
@@ -96,17 +96,17 @@ export function FeedbackHost() {
             role="alertdialog"
             aria-modal="true"
             aria-label="Confirmação"
-            className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-5 shadow-xl"
+            className="w-full max-w-sm rounded-xl border border-line bg-surface p-5 "
           >
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
-              <p className="text-sm text-zinc-100">{pending.message}</p>
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warn" aria-hidden />
+              <p className="text-sm text-ink">{pending.message}</p>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => answer(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-soft hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-warn"
               >
                 Cancelar
               </button>
@@ -114,7 +114,7 @@ export function FeedbackHost() {
                 ref={confirmBtn}
                 type="button"
                 onClick={() => answer(true)}
-                className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                className="rounded-lg bg-warn px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-warn focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warn"
               >
                 Confirmar
               </button>

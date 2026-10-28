@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Dialog } from "@/components/ui/dialog"
 import { Printer, X } from "lucide-react"
 import { useBranding } from "../../hooks/useBranding"
 
@@ -10,6 +11,7 @@ export interface ReceiptOrder {
   numero_mesa?: string
   tipo_atendimento?: string
   total: number | string
+  taxa_entrega?: number | string | null
   payment_method?: string
   valor_recebido?: number | string | null
   troco?: number | string | null
@@ -51,7 +53,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 }
 
 export function ReceiptPrintModal({ order, variant = "cliente", onClose }: ReceiptPrintModalProps) {
-  const { nome: brandName } = useBranding()
+  const { nome: brandName, receiptLogoUrl, data: loja } = useBranding()
   const [paper, setPaper] = React.useState<"80mm" | "58mm">("80mm")
   const cozinha = variant === "cozinha"
   const itens = order.itens ?? []
@@ -75,7 +77,7 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
   })
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 print:static print:bg-white print:p-0 print:backdrop-blur-none">
+    <Dialog label={cozinha ? "Imprimir comanda" : "Imprimir cupom"} onClose={onClose} zIndex={60} className="print:static print:bg-white print:p-0 print:backdrop-blur-none">
       <style>{`
         @media print {
           @page { size: ${paper} auto; margin: 0; }
@@ -85,13 +87,13 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
         }
       `}</style>
 
-      <div className="w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-5 shadow-2xl max-h-[92vh] flex flex-col print:max-h-none print:border-0 print:bg-transparent print:p-0 print:shadow-none">
+      <div className="w-full max-w-sm rounded-3xl bg-surface border border-line p-5 shadow-2xl max-h-[92vh] flex flex-col print:max-h-none print:border-0 print:bg-transparent print:p-0 print:shadow-none">
         <div className="flex items-center justify-between pb-3 print:hidden">
-          <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-            <Printer className="h-4 w-4 text-yellow-400" />
+          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Printer className="h-4 w-4 text-accent" />
             {cozinha ? "Imprimir Comanda" : "Imprimir Cupom"}
           </h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800" aria-label="Fechar">
+          <button onClick={onClose} className="rounded-full p-1.5 text-soft hover:bg-raised" aria-label="Fechar">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -103,7 +105,7 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
               type="button"
               onClick={() => setPaper(p)}
               className={`flex-1 rounded-xl border px-3 py-1.5 text-xs font-bold ${
-                paper === p ? "bg-yellow-400 text-zinc-950 border-yellow-400" : "bg-zinc-950 text-zinc-300 border-zinc-800"
+                paper === p ? "bg-accent text-accent-ink border-accent" : "bg-canvas text-soft border-line"
               }`}
             >
               Papel {p}
@@ -111,15 +113,26 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto rounded-xl bg-zinc-200 p-3 print:overflow-visible print:bg-transparent print:p-0">
+        <div className="flex-1 overflow-y-auto rounded-xl bg-ink p-3 print:overflow-visible print:bg-transparent print:p-0">
           <div
             id="receipt-print"
             style={{ width: paper, fontFamily: "'Courier New', monospace", fontSize: paper === "58mm" ? 10 : 12 }}
             className="mx-auto bg-white p-3 text-black shadow"
           >
             <div className="text-center">
+              {receiptLogoUrl && !cozinha && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={receiptLogoUrl}
+                  alt=""
+                  className="mx-auto mb-1"
+                  style={{ maxWidth: "70%", maxHeight: "22mm", imageRendering: "pixelated" }}
+                />
+              )}
               <div className="font-bold" style={{ fontSize: "1.2em" }}>{brandName}</div>
-              <div>CNPJ 12.345.678/0001-90</div>
+              {loja?.endereco && <div>{loja.endereco}</div>}
+              {loja?.telefone && <div>Tel. {loja.telefone}</div>}
+              {loja?.cnpj && <div>CNPJ {loja.cnpj}</div>}
               <div>{emitidoEm}</div>
             </div>
             <hr className="my-2 border-t border-dashed border-black" />
@@ -169,6 +182,12 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
             {!cozinha && (
               <>
                 <hr className="my-2 border-t border-dashed border-black" />
+                {Number(order.taxa_entrega) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Taxa de entrega</span>
+                    <span>{brl(order.taxa_entrega)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold" style={{ fontSize: "1.2em" }}>
                   <span>TOTAL</span>
                   <span>{brl(total)}</span>
@@ -209,20 +228,20 @@ export function ReceiptPrintModal({ order, variant = "cliente", onClose }: Recei
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-11 rounded-2xl border border-zinc-800 bg-zinc-950 text-xs font-bold text-zinc-400 hover:bg-zinc-800"
+            className="flex-1 h-11 rounded-2xl border border-line bg-canvas text-xs font-bold text-soft hover:bg-raised"
           >
             Fechar
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex-[2] h-11 rounded-2xl bg-yellow-400 text-xs font-black text-zinc-950 hover:bg-yellow-300 flex items-center justify-center gap-2"
+            className="flex-[2] h-11 rounded-2xl bg-accent text-xs font-black text-accent-ink hover:bg-accent-hover flex items-center justify-center gap-2"
           >
             <Printer className="h-4 w-4" />
             Imprimir
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   )
 }

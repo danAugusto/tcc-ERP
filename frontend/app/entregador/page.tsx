@@ -1,6 +1,9 @@
 "use client";
 
 import { notify, askConfirm } from "@/components/ui/feedback";
+import { brl, formatDuration } from "@/lib/format"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import React, { useState, useRef } from "react";
 import useSWR, { mutate } from "swr";
 import { api, fetcher } from "@/services/api";
@@ -151,7 +154,7 @@ export default function EntregadorApp() {
       });
       await mutateDisp();
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao alterar disponibilidade.");
+      notify(apiErrorMessage(err, "Erro ao alterar disponibilidade."));
     }
   };
 
@@ -161,7 +164,7 @@ export default function EntregadorApp() {
       await mutateTurno();
       await mutateDisp();
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao iniciar turno.");
+      notify(apiErrorMessage(err, "Erro ao iniciar turno."));
     }
   };
 
@@ -172,7 +175,7 @@ export default function EntregadorApp() {
       await mutateTurno();
       await mutateDisp();
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao encerrar turno.");
+      notify(apiErrorMessage(err, "Erro ao encerrar turno."));
     }
   };
 
@@ -224,7 +227,7 @@ export default function EntregadorApp() {
       setHasSignature(false);
       notify("Entrega confirmada com sucesso!");
     } catch (err: any) {
-      notify(err.response?.data?.detail || err.response?.data?.pin || "Erro ao confirmar entrega.");
+      notify(apiErrorMessage(err, "Erro ao confirmar entrega."));
     } finally {
       setActionLoading(false);
     }
@@ -247,7 +250,7 @@ export default function EntregadorApp() {
       setOtherReasonText("");
       notify("Falha registrada. O pedido agora consta como 'Retornando à base'!");
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao reportar falha.");
+      notify(apiErrorMessage(err, "Erro ao reportar falha."));
     } finally {
       setActionLoading(false);
     }
@@ -277,7 +280,7 @@ export default function EntregadorApp() {
     const rect = canvas.getBoundingClientRect();
     const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    ctx.strokeStyle = "#eab308";
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--c-accent").trim() || "#eab308";
     ctx.lineWidth = 2.5;
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -299,166 +302,106 @@ export default function EntregadorApp() {
   const totalEmDinheiro = pedidosDinheiro.reduce((sum, p) => sum + Number(p.total), 0);
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-zinc-950 p-0 sm:p-6">
-      {/* Moldura do Smartphone (Exatamente o mesmo modelo do App Cliente) */}
-      <div className="relative flex h-full max-h-230 w-full max-w-md flex-col overflow-hidden rounded-none sm:rounded-[40px] border-0 sm:border-8 sm:border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/80">
-        
-        {/* Top Notch Bar */}
-        <div className="flex items-center justify-between bg-zinc-950 px-6 pt-3 pb-2 text-xs font-semibold text-zinc-400">
-          <span>09:41</span>
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-zinc-400" />
-            <span className="h-2 w-2 rounded-full bg-zinc-400" />
-            <span className="h-2 w-3 rounded-sm border border-zinc-400 bg-zinc-400" />
-          </div>
-        </div>
-
+    <div className="flex h-full w-full justify-center bg-canvas">
+      <div className="relative flex h-full w-full max-w-md flex-col overflow-hidden bg-canvas sm:border-x sm:border-line">
         {/* Dynamic App Content */}
-        <div className="flex-1 overflow-y-auto pb-20">
+        <div className="flex-1 overflow-y-auto" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)" }}>
 
           {/* TAB 1: HOME (ENTREGAS ATIVAS) */}
           {activeTab === "home" && (
             <div className="space-y-4 px-4 pt-2">
               
-              {/* Header do Entregador */}
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 font-bold text-zinc-950 shadow-md shadow-yellow-400/20">
-                    <Bike className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-[15px] font-black text-zinc-100">Entregador Próprio</p>
-                    <p className="text-xs text-zinc-400">
-                      {turnoData?.ativo ? "Em turno" : "Fora de turno"}
-                    </p>
-                  </div>
+              {/* Cabeçalho */}
+              <header className="mt-2 flex items-center justify-between border-b border-dashed border-line pb-4">
+                <div>
+                  <h1 className="text-4xl text-ink">Entregas</h1>
+                  <p className="text-sm text-muted">{turnoData?.ativo ? "Você está em turno" : "Fora de turno"}</p>
                 </div>
-
-                {/* Botão de Disponibilidade (Pílula) */}
                 <button
+                  type="button"
                   onClick={handleToggleDisponibilidade}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
-                    dispData?.is_online
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-sm"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-400"
+                  aria-pressed={!!dispData?.is_online}
+                  className={`flex h-10 items-center gap-2 rounded-lg border-2 px-3.5 text-sm font-bold ${
+                    dispData?.is_online ? "border-success text-success" : "border-line-strong text-muted"
                   }`}
                 >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      dispData?.is_online ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"
-                    }`}
-                  />
-                  <span>{dispData?.is_online ? "Visível" : "Invisível"}</span>
+                  <span className={`h-2.5 w-2.5 rounded-[2px] ${dispData?.is_online ? "bg-success" : "bg-line-strong"}`} aria-hidden />
+                  {dispData?.is_online ? "Disponível" : "Indisponível"}
                 </button>
-              </div>
+              </header>
 
               {/* Banner de Turno / Ponto */}
               {!turnoData?.ativo ? (
-                <div className="flex items-center justify-between rounded-2xl border border-yellow-400 bg-zinc-900 p-4 shadow-sm mt-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-yellow-400/20 shrink-0">
-                      <Clock className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <span className="text-xs leading-snug text-zinc-300 max-w-35">
-                      Inicie seu turno para poder receber entregas e ficar online.
-                    </span>
-                  </div>
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-accent/10 p-4">
+                  <span className="text-sm leading-snug text-soft">Inicie o turno para receber entregas e ficar disponível.</span>
                   <button
+                    type="button"
                     onClick={handleCheckin}
-                    className="shrink-0 rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-zinc-950 hover:bg-yellow-300 shadow-sm"
+                    className="h-11 shrink-0 rounded-lg bg-accent px-4 text-sm font-bold text-accent-ink hover:bg-accent-hover"
                   >
-                    Bater Ponto
+                    Bater ponto
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs mt-4">
-                  <span className="flex items-center gap-1.5 text-zinc-300">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                    Turno em andamento: <strong>{turnoData.turno?.duracao_minutos || 0} min</strong>
+                <div className="mt-4 flex items-center justify-between border-b border-line pb-3 text-sm">
+                  <span className="flex items-center gap-2 text-soft">
+                    <span className="h-2.5 w-2.5 rounded-[2px] bg-success" aria-hidden />
+                    Turno há <strong className="text-ink">{formatDuration(turnoData.turno?.duracao_minutos || 0)}</strong>
                   </span>
-                  <button
-                    onClick={handleCheckout}
-                    className="text-red-400 font-semibold hover:underline px-2"
-                  >
-                    Encerrar Ponto
+                  <button type="button" onClick={handleCheckout} className="font-semibold text-danger hover:underline">
+                    Encerrar ponto
                   </button>
                 </div>
               )}
 
               {/* Barra de Busca */}
               <div className="relative mt-4">
-                <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted" />
                 <input
                   type="text"
-                  placeholder="Buscar entrega, rua ou pedido..."
+                  placeholder="Buscar entrega, rua ou pedido"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-11 w-full rounded-2xl border border-zinc-800/80 bg-zinc-900/90 pl-10 pr-4 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-yellow-400 focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                  aria-label="Buscar entrega" className="h-12 w-full rounded-lg border border-line-strong bg-canvas pl-10 pr-4 text-base text-ink placeholder:text-faint focus:border-accent focus:outline-none"
                 />
               </div>
 
-              {/* Filtros em Pílula */}
-              <div className="mt-3">
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <div role="tablist" aria-label="Filtrar entregas" className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto border-b border-line px-4">
+                {[
+                  { id: null as string | null, label: `Todas (${activeOrders.length})` },
+                  { id: "pronto", label: "Prontas" },
+                  { id: "em_preparo", label: "Na cozinha" },
+                  { id: "retornando_base", label: "Retorno" },
+                ].map((f) => (
                   <button
-                    onClick={() => setFilterStatus(null)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                      filterStatus === null
-                        ? "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20"
-                        : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                    key={f.id ?? "todas"}
+                    type="button"
+                    role="tab"
+                    aria-selected={filterStatus === f.id}
+                    onClick={() => setFilterStatus(f.id)}
+                    className={`-mb-px shrink-0 border-b-4 px-3.5 py-2.5 text-base font-semibold ${
+                      filterStatus === f.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
                     }`}
                   >
-                    <span>✨ Todas ({activeOrders.length})</span>
+                    {f.label}
                   </button>
-                  <button
-                    onClick={() => setFilterStatus("pronto")}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                      filterStatus === "pronto"
-                        ? "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20"
-                        : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
-                    }`}
-                  >
-                    <span>📦 Prontas</span>
-                  </button>
-                  <button
-                    onClick={() => setFilterStatus("em_preparo")}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                      filterStatus === "em_preparo"
-                        ? "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20"
-                        : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
-                    }`}
-                  >
-                    <span>🍳 Cozinha</span>
-                  </button>
-                  <button
-                    onClick={() => setFilterStatus("retornando_base")}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                      filterStatus === "retornando_base"
-                        ? "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20"
-                        : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
-                    }`}
-                  >
-                    <span>🔄 Retorno</span>
-                  </button>
-                </div>
+                ))}
               </div>
 
               {/* Lista de Entregas Designadas */}
               <div className="mt-6">
                 <div className="mb-4 flex items-center justify-between">
-                  <h4 className="flex items-center text-xs font-black tracking-wide text-zinc-100 uppercase">
-                    <Package className="mr-2 h-4 w-4 text-yellow-400" /> MINHAS ENTREGAS ATIVAS ({activeOrders.length})
-                  </h4>
-                  <span className="text-xs font-medium text-zinc-500">
-                    Máx: 4 simultâneas
-                  </span>
+                  <h2 className="text-3xl text-ink">
+                    Ativas <span className="font-display text-accent">{activeOrders.length}</span>
+                  </h2>
+                  <span className="text-sm text-muted">máximo de 4 por vez</span>
                 </div>
 
                 {activeOrders.length === 0 ? (
-                  <div className="flex h-56 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-zinc-800/80 bg-zinc-900/30 p-6 text-center text-zinc-500">
-                    <Bike className="h-12 w-12 text-zinc-700 mb-4 opacity-60" />
-                    <p className="font-bold text-[15px] text-zinc-300">Nenhuma entrega atribuída no momento</p>
-                    <p className="text-xs text-zinc-500 mt-2 max-w-55 leading-relaxed">
+                  <div className="flex h-56 flex-col items-center justify-center border-2 border-dashed border-line p-6 text-center text-muted">
+                    <Bike className="h-12 w-12 text-faint mb-4 opacity-60" />
+                    <p className="font-bold text-[15px] text-soft">Nenhuma entrega atribuída no momento</p>
+                    <p className="text-xs text-muted mt-2 max-w-55 leading-relaxed">
                       Fique disponível para a loja despachar pedidos para você.
                     </p>
                   </div>
@@ -466,111 +409,94 @@ export default function EntregadorApp() {
                   <div className="space-y-3">
                     {filteredActiveOrders.map((pedido) => {
                       const isRetornando = pedido.status === "retornando_base";
+                      const statusLabel: Record<string, string> = {
+                        confirmado: "Confirmado",
+                        em_preparo: "Em preparo",
+                        pronto: "Pronto para sair",
+                        retornando_base: "Voltando à loja",
+                        entregue: "Entregue",
+                      };
                       return (
-                        <div
-                          key={pedido.id}
-                          className={`rounded-2xl border p-4 transition-all ${
-                            isRetornando
-                              ? "border-red-500/40 bg-red-950/20"
-                              : "border-zinc-800/80 bg-zinc-900 hover:border-zinc-700"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between border-b border-zinc-800/60 pb-3">
+                        <article key={pedido.id} className="ticket px-4 pb-4 pt-7">
+                          <div className="flex items-start justify-between gap-3">
                             <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-extrabold text-zinc-100">
-                                  Pedido #{pedido.id}
-                                </span>
-                                <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-xs font-bold text-yellow-400">
-                                  DELIVERY
-                                </span>
-                              </div>
-                              <span className="text-xs font-medium text-zinc-400">
-                                Total: <strong className="text-zinc-100">R$ {Number(pedido.total).toFixed(2)}</strong>
-                              </span>
+                              <p className="text-sm font-semibold text-paper-muted">Pedido</p>
+                              <p className="font-display text-5xl">{pedido.id}</p>
                             </div>
-
-                            {isRetornando ? (
-                              <span className="rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-bold text-red-400 border border-red-500/30">
-                                Retornando
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-semibold text-zinc-300">
-                                {pedido.status.toUpperCase()}
-                              </span>
-                            )}
+                            <div className="text-right">
+                              <p className={`text-sm font-bold ${isRetornando ? "text-paper-danger" : ""}`}>
+                                {statusLabel[pedido.status] ?? pedido.status}
+                              </p>
+                              <p className="font-display text-3xl">{brl(pedido.total)}</p>
+                            </div>
                           </div>
 
-                          {/* Alerta de Troco */}
-                          {pedido.payment_method === "dinheiro" && (
-                            <div className="mt-2.5 rounded-xl border border-amber-500/30 bg-amber-950/30 p-2 text-xs text-amber-200 flex items-center justify-between">
-                              <span className="font-semibold flex items-center gap-1 text-xs">
-                                <DollarSign className="h-3.5 w-3.5 text-amber-400" /> Cobrar Dinheiro
-                              </span>
-                              {Number(pedido.troco) > 0 ? (
-                                <span className="font-bold text-amber-300 text-xs">
-                                  Troco: R$ {Number(pedido.troco).toFixed(2)}
-                                </span>
-                              ) : (
-                                <span className="text-zinc-400 text-xs">Sem troco</span>
+                          <div className="my-3 border-t-2 border-dashed border-paper-line" aria-hidden />
+
+                          <div className="flex items-start gap-2">
+                            <MapPin className="mt-1 h-5 w-5 shrink-0" aria-hidden />
+                            <div className="leading-snug">
+                              <p className="text-xl font-bold">
+                                {pedido.endereco?.logradouro}, {pedido.endereco?.numero}
+                              </p>
+                              <p className="text-paper-muted">
+                                {pedido.endereco?.bairro} · {pedido.endereco?.cidade}/{pedido.endereco?.uf}
+                              </p>
+                              {pedido.endereco?.complemento && (
+                                <p className="text-sm text-paper-muted">Complemento: {pedido.endereco?.complemento}</p>
                               )}
+                            </div>
+                          </div>
+
+                          {pedido.payment_method === "dinheiro" && (
+                            <div className="mt-3 flex items-center justify-between border-2 border-paper-ink p-2.5">
+                              <span className="flex items-center gap-1.5 font-bold">
+                                <DollarSign className="h-4 w-4" aria-hidden /> Cobrar em dinheiro
+                              </span>
+                              <span className="font-semibold">
+                                {Number(pedido.troco) > 0 ? `Troco ${brl(pedido.troco)}` : "Sem troco"}
+                              </span>
                             </div>
                           )}
 
-                          {/* Endereço */}
-                          <div className="mt-3 flex items-start gap-2 text-xs text-zinc-300">
-                            <MapPin className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-medium text-zinc-100">
-                                {pedido.endereco?.logradouro}, {pedido.endereco?.numero}
-                              </p>
-                              <p className="text-zinc-400 text-xs">
-                                {pedido.endereco?.bairro} - {pedido.endereco?.cidade}/{pedido.endereco?.uf}
-                              </p>
-                              {pedido.endereco?.complemento && (
-                                <p className="text-xs text-zinc-500">Compl: {pedido.endereco?.complemento}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Ações Rápidas de Navegação */}
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <button
+                              type="button"
                               onClick={() => handleOpenWaze(pedido.endereco)}
-                              className="flex items-center justify-center gap-1 rounded-xl border border-sky-500/30 bg-sky-950/30 py-2 text-xs font-bold text-sky-400 hover:bg-sky-900/40"
+                              className="flex h-11 items-center justify-center gap-2 rounded-md border-2 border-paper-line font-semibold hover:border-paper-ink"
                             >
-                              <Navigation className="h-3.5 w-3.5" />
-                              <span>Waze</span>
+                              <Navigation className="h-4 w-4" />
+                              Waze
                             </button>
-
                             <button
+                              type="button"
                               onClick={() => handleOpenGoogleMaps(pedido.endereco)}
-                              className="flex items-center justify-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-950/30 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-900/40"
+                              className="flex h-11 items-center justify-center gap-2 rounded-md border-2 border-paper-line font-semibold hover:border-paper-ink"
                             >
-                              <MapPin className="h-3.5 w-3.5" />
-                              <span>Maps</span>
+                              <MapPin className="h-4 w-4" />
+                              Maps
                             </button>
                           </div>
 
-                          {/* Botões de Conclusão / Falha */}
-                          <div className="mt-3 flex items-center gap-2 border-t border-zinc-800/60 pt-3">
+                          <div className="mt-2 flex gap-2">
                             {!isRetornando && (
                               <button
+                                type="button"
                                 onClick={() => setSelectedOrderForFailure(pedido)}
-                                className="flex-1 rounded-xl border border-red-500/30 bg-red-950/20 py-2.5 text-xs font-bold text-red-400 hover:bg-red-900/30"
+                                className="h-12 flex-1 rounded-md border-2 border-paper-danger font-bold text-paper-danger hover:bg-paper-danger/10"
                               >
-                                Falha
+                                Não entreguei
                               </button>
                             )}
-
                             <button
+                              type="button"
                               onClick={() => setSelectedOrderForDelivery(pedido)}
-                              className="flex-1 rounded-xl bg-yellow-400 py-2.5 text-xs font-black text-zinc-950 hover:bg-yellow-300 shadow-md shadow-yellow-400/20"
+                              className="h-12 flex-[1.4] rounded-md bg-paper-ink font-bold text-paper hover:opacity-90"
                             >
-                              {isRetornando ? "Devolver na Loja" : "Concluir Entrega"}
+                              {isRetornando ? "Devolver na loja" : "Concluir entrega"}
                             </button>
                           </div>
-                        </div>
+                        </article>
                       );
                     })}
                   </div>
@@ -582,27 +508,27 @@ export default function EntregadorApp() {
           {/* TAB 2: PEDIDOS (HISTÓRICO CONCLUÍDO) */}
           {activeTab === "orders" && (
             <div className="px-4 pt-2 space-y-3">
-              <h3 className="text-sm font-bold text-zinc-100">Histórico de Entregas</h3>
+              <h3 className="text-sm font-bold text-ink">Histórico de entregas</h3>
               {completedOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-500 text-xs">
-                  <Clock className="h-10 w-10 text-zinc-700 opacity-40 mb-2" />
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted text-xs">
+                  <Clock className="h-10 w-10 text-faint opacity-40 mb-2" />
                   <p>Nenhuma entrega finalizada ainda.</p>
                 </div>
               ) : (
                 completedOrders.slice(0, 10).map((ord) => (
-                  <div key={ord.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 space-y-2 text-xs">
+                  <div key={ord.id} className="rounded-2xl border border-line bg-surface p-4 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-yellow-400">Pedido #{ord.id}</span>
-                      <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-400 capitalize">
+                      <span className="font-bold text-accent">Pedido #{ord.id}</span>
+                      <span className="rounded-md bg-success/20 px-2.5 py-0.5 text-xs font-bold text-success capitalize">
                         • {ord.status}
                       </span>
                     </div>
-                    <p className="text-zinc-400 truncate text-xs">
+                    <p className="text-soft truncate text-xs">
                       {ord.endereco?.logradouro}, {ord.endereco?.numero} - {ord.endereco?.bairro}
                     </p>
-                    <div className="flex justify-between text-zinc-400 pt-1 border-t border-zinc-800/60">
+                    <div className="flex justify-between text-soft pt-1 border-t border-line/60">
                       <span>Total:</span>
-                      <span className="font-bold text-zinc-100">
+                      <span className="font-bold text-ink">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(ord.total))}
                       </span>
                     </div>
@@ -615,37 +541,37 @@ export default function EntregadorApp() {
           {/* TAB 3: CARTEIRA / RESUMO DE CAIXA */}
           {activeTab === "cart" && (
             <div className="px-4 pt-2 space-y-4">
-              <h3 className="text-sm font-bold text-zinc-100">Resumo de Caixa do Turno</h3>
+              <h3 className="text-sm font-bold text-ink">Resumo de Caixa do Turno</h3>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                    <Wallet className="h-4 w-4 text-yellow-400" />
+              <div className="rounded-2xl border border-line bg-surface p-5  space-y-4">
+                <div className="flex items-center justify-between border-b border-line pb-3">
+                  <span className="text-xs font-bold   text-soft flex items-center gap-1.5">
+                    <Wallet className="h-4 w-4 text-accent" />
                     Saldo a Repassar
                   </span>
-                  <span className="text-xs font-mono text-emerald-400">
+                  <span className="text-xs text-success">
                     {turnoData?.ativo ? "Turno Ativo" : "Fechado"}
                   </span>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-xs text-zinc-400">Total em Dinheiro Retido:</span>
-                  <div className="text-3xl font-black font-mono text-yellow-400">
-                    R$ {Number(turnoData?.turno?.saldo_dinheiro || totalEmDinheiro).toFixed(2)}
+                  <span className="text-xs text-soft">Total em Dinheiro Retido:</span>
+                  <div className="text-3xl font-black text-accent">
+                    {brl(turnoData?.turno?.saldo_dinheiro || totalEmDinheiro)}
                   </div>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted">
                     Calculado a partir de {pedidosDinheiro.length} pedido(s) pagos em espécie.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs space-y-2 text-zinc-300">
+                <div className="rounded-xl border border-line bg-canvas p-3 text-xs space-y-2 text-soft">
                   <div className="flex justify-between">
                     <span>Tempo de Turno:</span>
-                    <span className="font-semibold">{turnoData?.turno?.duracao_minutos || 0} min</span>
+                    <span className="font-semibold">{formatDuration(turnoData?.turno?.duracao_minutos || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Acerto com a Gerência:</span>
-                    <span className="font-semibold text-yellow-400">
+                    <span className="font-semibold text-accent">
                       {turnoData?.turno?.acerto_confirmado ? "Confirmado" : "Pendente"}
                     </span>
                   </div>
@@ -654,7 +580,7 @@ export default function EntregadorApp() {
                 <button
                   onClick={handleCheckout}
                   disabled={!turnoData?.ativo}
-                  className="w-full rounded-2xl bg-yellow-400 py-3.5 text-center text-xs font-black text-zinc-950 shadow-lg shadow-yellow-400/20 disabled:opacity-40"
+                  className="w-full rounded-2xl bg-accent py-3.5 text-center text-xs font-black text-accent-ink  disabled:opacity-40"
                 >
                   Solicitar Acerto &amp; Fechar Caixa
                 </button>
@@ -665,36 +591,36 @@ export default function EntregadorApp() {
           {/* TAB 4: CONTA / PERFIL */}
           {activeTab === "profile" && (
             <div className="px-4 pt-2 space-y-4 text-xs">
-              <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-400 text-lg font-black text-zinc-950">
-                  🛵
+              <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-lg font-black text-accent-ink">
+                  <Bike className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-zinc-100">Entregador Próprio</p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-sm font-bold text-ink">Entregador</p>
+                  <p className="text-xs text-soft">
                     {dispData?.is_online ? "Status: Online (Disponível)" : "Status: Pausa (Invisível)"}
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 divide-y divide-zinc-800">
+              <div className="rounded-2xl border border-line bg-surface divide-y divide-line">
                 <div
                   onClick={turnoData?.ativo ? handleCheckout : handleCheckin}
-                  className="p-3.5 flex justify-between items-center text-zinc-200 cursor-pointer hover:bg-zinc-800/50"
+                  className="p-3.5 flex justify-between items-center text-ink cursor-pointer hover:bg-raised/50"
                 >
                   <span className="flex items-center gap-2 font-medium">
-                    <Power className="h-4 w-4 text-yellow-400" />
+                    <Power className="h-4 w-4 text-accent" />
                     {turnoData?.ativo ? "Encerrar Ponto / Turno" : "Bater Ponto / Iniciar"}
                   </span>
-                  <ChevronRight className="h-4 w-4 text-zinc-500" />
+                  <ChevronRight className="h-4 w-4 text-muted" />
                 </div>
 
                 <div
                   onClick={handleToggleDisponibilidade}
-                  className="p-3.5 flex justify-between items-center text-zinc-200 cursor-pointer hover:bg-zinc-800/50"
+                  className="p-3.5 flex justify-between items-center text-ink cursor-pointer hover:bg-raised/50"
                 >
-                  <span>Alternar Disponibilidade</span>
-                  <span className={`text-xs font-bold ${dispData?.is_online ? "text-emerald-400" : "text-zinc-500"}`}>
+                  <span>Alternar disponibilidade</span>
+                  <span className={`text-xs font-bold ${dispData?.is_online ? "text-success" : "text-muted"}`}>
                     {dispData?.is_online ? "Online" : "Pausa"}
                   </span>
                 </div>
@@ -703,7 +629,7 @@ export default function EntregadorApp() {
               <button
                 type="button"
                 onClick={logout}
-                className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 py-3 text-xs font-bold text-red-400 hover:bg-red-500/20"
+                className="w-full rounded-2xl border border-danger/30 bg-danger/10 py-3 text-xs font-bold text-danger hover:bg-danger/20"
               >
                 Sair da Conta
               </button>
@@ -713,7 +639,7 @@ export default function EntregadorApp() {
         </div>
 
         {/* BOTTOM NAVIGATION BAR (Exatamente igual ao App do Cliente) */}
-        <nav className="absolute bottom-0 left-0 right-0 flex h-16 items-center justify-around border-t border-zinc-800/80 bg-zinc-950/95 px-4 backdrop-blur-md">
+        <nav aria-label="Navegação do aplicativo" className="absolute bottom-0 left-0 right-0 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-stretch justify-around border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)]">
           {[
             { id: "home", label: "Entregas", icon: Package },
             { id: "orders", label: "Histórico", icon: Clock },
@@ -726,14 +652,15 @@ export default function EntregadorApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`relative flex flex-col items-center gap-1 transition-colors ${
-                  isActive ? "text-yellow-400 font-bold" : "text-zinc-500 hover:text-zinc-300"
+                aria-current={isActive ? "page" : undefined}
+                className={`relative flex flex-1 flex-col items-center justify-center gap-1 border-t-4 text-sm ${
+                  isActive ? "border-accent font-bold text-ink" : "border-transparent text-muted hover:text-soft"
                 }`}
               >
-                <Icon className="h-6 w-6" />
-                <span className="text-xs">{tab.label}</span>
+                <Icon className="h-5 w-5" />
+                {tab.label}
                 {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-xs font-bold text-zinc-950">
+                  <span className="absolute right-[calc(50%-2rem)] top-1.5 flex h-5 min-w-5 items-center justify-center rounded bg-accent px-1 text-xs font-bold text-accent-ink">
                     {tab.badge}
                   </span>
                 )}
@@ -744,28 +671,28 @@ export default function EntregadorApp() {
 
         {/* MODAL PROVA DE ENTREGA (POD) */}
         {selectedOrderForDelivery && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center p-0 sm:p-4">
-            <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-4xl sm:rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-yellow-400" />
+          <Dialog placement="sheet" label="Confirmar entrega" onClose={() => setSelectedOrderForDelivery(null)}>
+            <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-4xl sm:rounded-3xl border border-line bg-surface p-5 shadow-2xl   duration-300">
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-accent" />
                   Prova de Entrega (Pedido #{selectedOrderForDelivery.id})
                 </h3>
                 <button
                   onClick={() => setSelectedOrderForDelivery(null)}
-                  className="rounded-lg p-1 text-zinc-500 hover:text-zinc-300"
+                  className="rounded-lg p-1 text-muted hover:text-soft"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Seletor de Método de Comprovação */}
-              <div className="mt-4 grid grid-cols-3 gap-1.5 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+              <div className="mt-4 grid grid-cols-3 gap-1.5 rounded-xl border border-line bg-canvas p-1">
                 <button
                   type="button"
                   onClick={() => setValidationMethod("pin")}
-                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    validationMethod === "pin" ? "bg-yellow-400 text-zinc-950" : "text-zinc-400"
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                    validationMethod === "pin" ? "bg-accent text-accent-ink" : "text-soft"
                   }`}
                 >
                   Código PIN
@@ -773,8 +700,8 @@ export default function EntregadorApp() {
                 <button
                   type="button"
                   onClick={() => setValidationMethod("assinatura")}
-                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    validationMethod === "assinatura" ? "bg-yellow-400 text-zinc-950" : "text-zinc-400"
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                    validationMethod === "assinatura" ? "bg-accent text-accent-ink" : "text-soft"
                   }`}
                 >
                   Assinatura
@@ -782,8 +709,8 @@ export default function EntregadorApp() {
                 <button
                   type="button"
                   onClick={() => setValidationMethod("foto")}
-                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    validationMethod === "foto" ? "bg-yellow-400 text-zinc-950" : "text-zinc-400"
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                    validationMethod === "foto" ? "bg-accent text-accent-ink" : "text-soft"
                   }`}
                 >
                   Foto
@@ -793,7 +720,7 @@ export default function EntregadorApp() {
               <form onSubmit={handleConfirmarEntrega} className="mt-4 space-y-4">
                 {validationMethod === "pin" && (
                   <div className="space-y-2">
-                    <label htmlFor="f-appentregadorpage-1" className="block text-xs font-medium text-zinc-400">
+                    <label htmlFor="f-appentregadorpage-1" className="block text-xs font-medium text-soft">
                       Digite o PIN de 4 dígitos informado pelo cliente:
                     </label>
                     <input id="f-appentregadorpage-1"
@@ -803,9 +730,9 @@ export default function EntregadorApp() {
                       placeholder="Ex: 1234"
                       value={pinInput}
                       onChange={(e) => setPinInput(e.target.value)}
-                      className="w-full text-center text-2xl font-extrabold tracking-widest font-mono rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-yellow-400 focus:border-yellow-400 focus:outline-none"
+                      className="w-full text-center text-2xl font-extrabold  font-mono rounded-xl border border-line bg-raised px-4 py-2.5 text-accent focus:border-accent focus:outline-none"
                     />
-                    <p className="text-xs text-zinc-500 text-center">
+                    <p className="text-xs text-muted text-center">
                       Código exibido na tela do cliente para segurança.
                     </p>
                   </div>
@@ -814,19 +741,19 @@ export default function EntregadorApp() {
                 {validationMethod === "assinatura" && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-zinc-400">
+                      <label className="text-xs font-medium text-soft">
                         Assinatura na tela do aparelho:
                       </label>
                       <button
                         type="button"
                         onClick={clearCanvas}
-                        className="text-xs font-semibold text-yellow-400 hover:underline"
+                        className="text-xs font-semibold text-accent hover:underline"
                       >
                         Limpar
                       </button>
                     </div>
 
-                    <div className="rounded-xl border border-zinc-700 bg-zinc-950 p-1">
+                    <div className="rounded-xl border border-line bg-canvas p-1">
                       <canvas
                         ref={canvasRef}
                         width={300}
@@ -838,7 +765,7 @@ export default function EntregadorApp() {
                         onTouchStart={startDrawing}
                         onTouchMove={draw}
                         onTouchEnd={stopDrawing}
-                        className="w-full touch-none cursor-crosshair rounded-lg bg-zinc-950"
+                        className="w-full touch-none cursor-crosshair rounded-lg bg-canvas"
                       />
                     </div>
                   </div>
@@ -846,13 +773,13 @@ export default function EntregadorApp() {
 
                 {validationMethod === "foto" && (
                   <div className="space-y-2 text-center">
-                    <label className="block text-xs font-medium text-zinc-400">
+                    <label className="block text-xs font-medium text-soft">
                       Foto do pacote na porta ou entregue:
                     </label>
-                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-950/60 p-6">
-                      <Camera className="h-8 w-8 text-yellow-400 mb-2" />
-                      <span className="text-xs text-zinc-400 font-semibold">Tirar Foto com a Câmera</span>
-                      <span className="text-xs text-zinc-500 mt-1">(Simulação ativa para o teste)</span>
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-canvas/60 p-6">
+                      <Camera className="h-8 w-8 text-accent mb-2" />
+                      <span className="text-xs text-soft font-semibold">Tirar Foto com a Câmera</span>
+                      <span className="text-xs text-muted mt-1">(Simulação ativa para o teste)</span>
                     </div>
                   </div>
                 )}
@@ -860,27 +787,27 @@ export default function EntregadorApp() {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="w-full rounded-2xl bg-yellow-400 py-3 text-xs font-black text-zinc-950 shadow-lg shadow-yellow-400/20 hover:bg-yellow-300"
+                  className="w-full rounded-2xl bg-accent py-3 text-xs font-black text-accent-ink  hover:bg-accent-hover"
                 >
                   {actionLoading ? "Validando..." : "Confirmar e Finalizar"}
                 </button>
               </form>
             </div>
-          </div>
+          </Dialog>
         )}
 
         {/* MODAL FALHA NA ENTREGA */}
         {selectedOrderForFailure && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center p-0 sm:p-4">
-            <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-sm font-bold text-red-400 flex items-center gap-2">
+          <Dialog placement="sheet" label="Registrar falha na entrega" onClose={() => setSelectedOrderForFailure(null)}>
+            <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl border border-line bg-surface p-5 shadow-2xl   duration-300">
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <h3 className="text-sm font-bold text-danger flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   Falha na Entrega (Pedido #{selectedOrderForFailure.id})
                 </h3>
                 <button
                   onClick={() => setSelectedOrderForFailure(null)}
-                  className="rounded-lg p-1 text-zinc-500 hover:text-zinc-300"
+                  className="rounded-lg p-1 text-muted hover:text-soft"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -888,13 +815,13 @@ export default function EntregadorApp() {
 
               <form onSubmit={handleReportarFalha} className="mt-4 space-y-4">
                 <div>
-                  <label htmlFor="f-appentregadorpage-2" className="block text-xs font-medium text-zinc-400 mb-1.5">
+                  <label htmlFor="f-appentregadorpage-2" className="block text-xs font-medium text-soft mb-1.5">
                     Selecione o motivo:
                   </label>
                   <select id="f-appentregadorpage-2"
                     value={failureReason}
                     onChange={(e) => setFailureReason(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2.5 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                    className="w-full rounded-xl border border-line bg-raised px-3.5 py-2.5 text-xs text-ink focus:border-accent focus:outline-none"
                   >
                     <option value="Cliente ausente">Cliente ausente / Não atende</option>
                     <option value="Endereço incorreto">Endereço incorreto / Não localizado</option>
@@ -906,7 +833,7 @@ export default function EntregadorApp() {
 
                 {failureReason === "Outro" && (
                   <div>
-                    <label htmlFor="f-appentregadorpage-3" className="block text-xs font-medium text-zinc-400 mb-1">
+                    <label htmlFor="f-appentregadorpage-3" className="block text-xs font-medium text-soft mb-1">
                       Descreva o ocorrido:
                     </label>
                     <textarea id="f-appentregadorpage-3"
@@ -914,26 +841,26 @@ export default function EntregadorApp() {
                       rows={3}
                       value={otherReasonText}
                       onChange={(e) => setOtherReasonText(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                      className="w-full rounded-xl border border-line bg-raised px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
                       placeholder="Ex: interfone estragado e portão trancado..."
                     />
                   </div>
                 )}
 
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted">
                   O pedido entrará no status <strong>Retornando à base</strong> e alertará a loja.
                 </p>
 
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="w-full rounded-2xl bg-red-600 py-3 text-xs font-extrabold uppercase tracking-wider text-white hover:bg-red-500 shadow-lg shadow-red-600/20"
+                  className="w-full rounded-2xl bg-danger py-3 text-xs font-extrabold   text-white hover:bg-danger "
                 >
                   {actionLoading ? "Enviando..." : "Confirmar Falha & Retornar à Base"}
                 </button>
               </form>
             </div>
-          </div>
+          </Dialog>
         )}
 
       </div>

@@ -1,27 +1,29 @@
 "use client"
 
 import { useState } from "react"
-import { Bot, Zap, CheckCircle2, Play, RefreshCw, AlertTriangle, ShieldCheck } from "lucide-react"
+import { apiErrorMessage } from "@/lib/errors"
+import { CheckCircle2, Play, RefreshCw, AlertTriangle } from "lucide-react"
 import api from "../../services/api"
 import { useRpaStatus, formatRun } from "../../hooks/useRpaStatus"
+import { PageHeader, StatStrip } from "../../components/ui/blocks"
 
 const rpaTasks = [
   {
     id: "rpa-01",
-    name: "Robô de Emissão & Sincronização de Pedidos",
-    description: "Captura pedidos do app mobile e balcão, enviando automaticamente para a fila de preparo e módulo financeiro.",
+    name: "Sincronização de pedidos",
+    description: "Confere os pedidos em andamento e recoloca na fila da cozinha os que ficaram sem preparo.",
     frequency: "A cada 30 min",
   },
   {
     id: "rpa-02",
-    name: "Robô de Baixa Automática & Alerta de Estoque",
-    description: "Calcula a dedução de insumos com base nas receitas técnicas e emite alertas caso o estoque atinja nível crítico.",
+    name: "Alerta de estoque crítico",
+    description: "Varre os insumos e registra na auditoria os que estão no mínimo ou abaixo.",
     frequency: "A cada 1 hora",
   },
   {
     id: "rpa-03",
-    name: "Robô de Conciliação Financeira & Fechamento",
-    description: "Agrupa os lançamentos de Pix, Cartão e Dinheiro, gerando os relatórios de DRE e fluxo de caixa diário.",
+    name: "Conciliação do caixa do dia",
+    description: "Soma as receitas e despesas do dia por forma de pagamento e compara o dinheiro com os turnos.",
     frequency: "Diário (Fim do turno)",
   },
 ]
@@ -43,7 +45,7 @@ export default function RpaPage() {
       setTimeout(() => setSuccessNotice(""), 8000)
       rpa.refresh()
     } catch (err: any) {
-      setErrorNotice(err.response?.data?.detail || `Falha ao executar a rotina "${name}".`)
+      setErrorNotice(apiErrorMessage(err, `Falha ao executar a rotina "${name}".`))
       setTimeout(() => setErrorNotice(""), 8000)
     } finally {
       setRunningId(null)
@@ -51,122 +53,71 @@ export default function RpaPage() {
   }
 
   return (
-    <div className="flex flex-col space-y-6 p-6 bg-zinc-950 text-zinc-100 min-h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-50 flex items-center gap-2">
-            <Bot className="h-6 w-6 text-yellow-400" />
-            Central de Automação &amp; RPA
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Painel de controle dos robôs de automação de processos da Lanchonete &amp; Pastelaria.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/30 px-3 py-1 text-xs font-bold text-green-400">
-            <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-            Motor RPA Online
-          </span>
-        </div>
-      </div>
+    <div className="flex min-h-full flex-col gap-6 bg-canvas p-6 text-ink">
+      <PageHeader
+        title="Automações"
+        description="Os robôs rodam quando você pede e deixam o resultado registrado na auditoria. Ainda não há agendamento automático."
+      />
 
       {successNotice && (
-        <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 flex items-center gap-3 text-xs text-green-400 animate-in fade-in duration-200">
+        <p role="status" className="flex items-center gap-3 rounded-lg bg-success/10 p-3 text-sm text-success">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <span className="font-semibold">{successNotice}</span>
-        </div>
+          {successNotice}
+        </p>
       )}
-
       {errorNotice && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 flex items-center gap-3 text-xs text-red-400">
+        <p role="alert" className="flex items-center gap-3 rounded-lg bg-danger/10 p-3 text-sm text-danger">
           <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span className="font-semibold">{errorNotice}</span>
-        </div>
+          {errorNotice}
+        </p>
       )}
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900 p-5">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Rotinas Ativas</span>
-            <Zap className="h-4 w-4 text-yellow-400" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-zinc-100">3 de 3</p>
-          <p className="mt-1 text-xs font-medium text-green-400">100% de disponibilidade</p>
-        </div>
+      <StatStrip
+        items={[
+          { label: "Robôs disponíveis", value: rpaTasks.length },
+          { label: "Execuções hoje", value: rpa.runsToday, hint: "Registradas na auditoria" },
+          { label: "Última execução", value: formatRun(rpa.lastRun), hint: "Execução manual" },
+        ]}
+      />
 
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900 p-5">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Execuções Hoje</span>
-            <RefreshCw className="h-4 w-4 text-yellow-400" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-zinc-100">{rpa.runsToday}</p>
-          <p className="mt-1 text-xs font-medium text-zinc-400">Registradas na trilha de auditoria</p>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900 p-5">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Última Execução</span>
-            <ShieldCheck className="h-4 w-4 text-yellow-400" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-zinc-100">{formatRun(rpa.lastRun)}</p>
-          <p className="mt-1 text-xs font-medium text-green-400">Execução manual (sem agendador)</p>
-        </div>
-      </div>
-
-      {/* Lista de Robôs */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
-          Robôs de Automação em Operação
-        </h2>
-
-        <div className="grid grid-cols-1 gap-4">
+      <section aria-label="Robôs">
+        <h2 className="border-b-2 border-ink pb-2 text-3xl text-ink">Robôs</h2>
+        <ul className="divide-y divide-line">
           {rpaTasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900 p-5 transition-all hover:border-yellow-400/40"
-            >
-              <div className="space-y-1.5 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-yellow-400/10 text-yellow-400 font-bold text-xs">
-                    <Bot className="h-4 w-4" />
-                  </span>
-                  <h3 className="font-bold text-sm text-zinc-100">{task.name}</h3>
-                  <span className="rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-xs font-bold text-green-400">
-                    Ativo
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-400">{task.description}</p>
-                <div className="flex flex-wrap gap-4 pt-1 text-xs text-zinc-500">
-                  <span>Frequência recomendada: <strong className="text-zinc-300 font-medium">{task.frequency}</strong></span>
-                  <span>Última execução: <strong className="text-zinc-300 font-medium">{formatRun(rpa.lastRunOf(task.id))}</strong></span>
-                  <span>Execuções registradas: <strong className="text-zinc-300 font-medium">{rpa.countOf(task.id)}</strong></span>
-                </div>
+            <li key={task.id} className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-2xl text-ink">{task.name}</h3>
+                <p className="mt-1 max-w-2xl text-sm text-soft">{task.description}</p>
+                <p className="mt-2 text-sm text-muted">
+                  Última execução: <span className="text-ink">{formatRun(rpa.lastRunOf(task.id))}</span>
+                  {" · "}
+                  {rpa.countOf(task.id)} no histórico
+                  {" · "}
+                  frequência recomendada: {task.frequency.toLowerCase()}
+                </p>
               </div>
-
-              <div className="w-full md:w-auto">
-                <button
-                  onClick={() => triggerRpa(task.id, task.name)}
-                  disabled={runningId === task.id}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 rounded-xl border border-yellow-400/60 bg-yellow-400/10 px-4 py-2.5 text-xs font-bold text-yellow-400 hover:bg-yellow-400 hover:text-zinc-950 transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                >
-                  {runningId === task.id ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      <span>Executando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-3.5 w-3.5" />
-                      <span>Executar Agora</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+              <button
+                type="button"
+                onClick={() => triggerRpa(task.id, task.name)}
+                disabled={runningId === task.id}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-bold text-accent-ink hover:bg-accent-hover disabled:opacity-50"
+              >
+                {runningId === task.id ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Executando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Executar agora
+                  </>
+                )}
+              </button>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </section>
     </div>
   )
 }

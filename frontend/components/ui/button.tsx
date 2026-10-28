@@ -1,40 +1,52 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
+type Variant = "primary" | "outline" | "ghost" | "danger" | "secondary" | "link"
+type Size = "sm" | "md" | "lg" | "icon"
+
+// Retorno ao toque: leve redução de escala (160 ms, ease-out), só em transform/cor.
+const base =
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-[transform,background-color,border-color,color,opacity] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-40"
+
+const variants: Record<Variant, string> = {
+  primary: "bg-accent font-bold text-accent-ink hover:bg-accent-hover",
+  outline: "border border-line-strong text-ink hover:bg-raised",
+  ghost: "text-soft hover:bg-raised hover:text-ink",
+  danger: "border border-danger/60 text-danger hover:bg-danger hover:text-canvas",
+  secondary: "bg-raised text-ink hover:bg-line",
+  link: "text-accent underline-offset-4 hover:underline active:scale-100",
+}
+
+const sizes: Record<Size, string> = {
+  sm: "h-9 px-3 text-sm",
+  md: "h-10 px-4 text-sm",
+  lg: "h-12 px-6 text-base",
+  icon: "h-10 w-10 text-soft hover:text-ink",
+}
+
+/** Classes do botão do sistema, para usar também em <Link> e <a>. */
+export function buttonClass(variant: Variant = "primary", size: Size = "md", extra?: string) {
+  return cn(base, variants[variant], sizes[size], extra)
+}
+
+// Compatibilidade com as variantes antigas do componente
+const legacy: Record<string, Variant> = { default: "primary", destructive: "danger", amber: "primary" }
+const legacySize: Record<string, Size> = { default: "md" }
+
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "amber"
-  size?: "default" | "sm" | "lg" | "icon"
+  variant?: Variant | "default" | "destructive" | "amber"
+  size?: Size | "default"
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
-    const baseStyles = "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]"
-    
-    const variants = {
-      default: "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20 hover:bg-yellow-300",
-      amber: "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/20 hover:bg-amber-400",
-      destructive: "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20",
-      outline: "border border-zinc-800 bg-zinc-900/60 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-50",
-      secondary: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700",
-      ghost: "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100",
-      link: "text-yellow-400 underline-offset-4 hover:underline",
-    }
-    
-    const sizes = {
-      default: "h-10 px-4 py-2",
-      sm: "h-8 rounded-lg px-3 text-xs",
-      lg: "h-12 rounded-2xl px-8 text-base",
-      icon: "h-9 w-9",
-    }
-    
-    return (
-      <button
-        className={cn(baseStyles, variants[variant], sizes[size], className)}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
+  ({ className, variant = "primary", size = "md", type = "button", ...props }, ref) => (
+    <button
+      ref={ref}
+      type={type}
+      className={buttonClass(legacy[variant] ?? (variant as Variant), legacySize[size] ?? (size as Size), className)}
+      {...props}
+    />
+  )
 )
 Button.displayName = "Button"
 

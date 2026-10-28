@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import useSWR, { mutate } from "swr"
 import api, { fetcher, mediaUrl } from "../../../services/api"
 import { Button } from "../../../components/ui/button"
@@ -185,33 +187,29 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
       onClose()
     } catch (err: any) {
       console.error("Erro ao salvar produto:", err)
-      const message =
-        err.response?.data?.detail ||
-        JSON.stringify(err.response?.data) ||
-        "Erro ao salvar produto. Verifique os dados."
-      setErrorMsg(message)
+      setErrorMsg(apiErrorMessage(err, "Não foi possível salvar o produto. Confira os dados."))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <h2 className="text-lg font-bold text-zinc-100 mb-4">
-          {productToEdit ? "Editar Produto" : "Novo Produto no Cardápio"}
+    <Dialog label={productToEdit ? "Editar produto" : "Novo produto"} onClose={onClose}>
+      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-surface border border-line p-6 shadow-2xl   duration-200">
+        <h2 className="text-3xl text-ink">
+          {productToEdit ? "Editar produto" : "Novo produto"}
         </h2>
 
         {errorMsg && (
-          <div className="mb-4 rounded-xl bg-red-500/10 p-3 text-xs text-red-400 border border-red-500/20">
+          <div className="mb-4 rounded-xl bg-danger/10 p-3 text-xs text-danger border border-danger/20">
             {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label htmlFor="f-appcatalogcomponentsProductForm-1" className="mb-1.5 block font-semibold text-zinc-300">
-              Nome do Produto
+            <label htmlFor="f-appcatalogcomponentsProductForm-1" className="mb-1.5 block text-sm font-semibold text-ink">
+              Produto
             </label>
             <Input id="f-appcatalogcomponentsProductForm-1"
               required
@@ -222,7 +220,7 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
           </div>
 
           <div>
-            <label htmlFor="f-appcatalogcomponentsProductForm-2" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appcatalogcomponentsProductForm-2" className="mb-1.5 block text-sm font-semibold text-ink">
               Preço de Venda (R$)
             </label>
             <Input id="f-appcatalogcomponentsProductForm-2"
@@ -238,20 +236,20 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-semibold text-zinc-300">
+              <label className="font-semibold text-soft">
                 Tipo / Categoria
               </label>
               <button
                 type="button"
                 onClick={() => setShowCatModal(true)}
-                className="text-xs font-semibold text-yellow-400 hover:text-yellow-300 flex items-center gap-1 transition-colors"
+                className="text-xs font-semibold text-accent hover:text-accent flex items-center gap-1 transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Novo Tipo
               </button>
             </div>
             <select
-              className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:border-yellow-400"
+              className="flex h-10 w-full rounded-xl border border-line bg-canvas px-3 py-2 text-sm text-ink  focus-visible:outline-none focus-visible:border-accent"
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
             >
@@ -270,7 +268,7 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
           </div>
 
           <div>
-            <label htmlFor="f-appcatalogcomponentsProductForm-3" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appcatalogcomponentsProductForm-3" className="mb-1.5 block text-sm font-semibold text-ink">
               Descrição (Opcional)
             </label>
             <Input id="f-appcatalogcomponentsProductForm-3"
@@ -281,19 +279,19 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
           </div>
 
           <div>
-            <label className="mb-1.5 block font-semibold text-zinc-300">
+            <label className="mb-1.5 block text-sm font-semibold text-ink">
               Imagem do Produto (Opcional)
             </label>
             <div className="flex items-center gap-3">
               {preview ? (
-                <img src={preview} alt="Pré-visualização" className="h-16 w-16 rounded-xl object-cover border border-zinc-800" />
+                <img src={preview} alt="Pré-visualização" className="h-16 w-16 rounded-xl object-cover border border-line" />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-zinc-950 border border-dashed border-zinc-700 text-zinc-600">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-canvas border border-dashed border-line text-muted">
                   <ImageIcon className="h-6 w-6" />
                 </div>
               )}
               <div className="flex flex-col gap-1.5">
-                <label className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-yellow-400/60">
+                <label className="cursor-pointer rounded-lg border border-line bg-canvas px-3 py-1.5 text-xs font-semibold text-soft hover:border-accent/60">
                   {preview ? "Trocar imagem" : "Selecionar imagem"}
                   <input
                     type="file"
@@ -306,35 +304,35 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
                   <button
                     type="button"
                     onClick={clearImage}
-                    className="flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300"
+                    className="flex items-center gap-1 text-xs font-semibold text-danger hover:text-danger"
                   >
                     <Trash2 className="h-3 w-3" /> Remover
                   </button>
                 )}
-                <span className="text-xs text-zinc-500">JPG, PNG ou WebP, até 5 MB</span>
+                <span className="text-xs text-muted">JPG, PNG ou WebP, até 5 MB</span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3.5">
+          <div className="rounded-2xl border border-line bg-canvas/60 p-3.5">
             <div className="flex items-center justify-between mb-1">
-              <label className="flex items-center gap-1.5 font-semibold text-zinc-300">
-                <FlaskConical className="h-3.5 w-3.5 text-yellow-400" /> Ficha Técnica (Opcional)
+              <label className="flex items-center gap-1.5 font-semibold text-soft">
+                <FlaskConical className="h-3.5 w-3.5 text-accent" /> Ficha Técnica (Opcional)
               </label>
               <button
                 type="button"
                 onClick={addFichaRow}
                 disabled={!insumos || insumos.length === 0}
-                className="text-xs font-semibold text-yellow-400 hover:text-yellow-300 flex items-center gap-1 disabled:opacity-40"
+                className="text-xs font-semibold text-accent hover:text-accent flex items-center gap-1 disabled:opacity-40"
               >
                 <Plus className="h-3 w-3" /> Insumo
               </button>
             </div>
-            <p className="text-xs text-zinc-500 mb-2">
+            <p className="text-xs text-muted mb-2">
               Quantidade de cada insumo usada em 1 unidade. O estoque é baixado automaticamente quando o pedido é confirmado.
             </p>
             {Array.isArray(insumos) && insumos.length === 0 && (
-              <p className="text-xs text-amber-400">Cadastre insumos no módulo Estoque para montar a ficha técnica.</p>
+              <p className="text-xs text-warn">Cadastre insumos no módulo Estoque para montar a ficha técnica.</p>
             )}
             <div className="space-y-2">
               {ficha.map((row) => {
@@ -344,7 +342,7 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
                     <select
                       value={row.insumo}
                       onChange={(e) => updateFicha(row.key, { insumo: e.target.value })}
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-2 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-canvas px-2 text-xs text-ink focus:border-accent focus:outline-none"
                     >
                       <option value="">Insumo...</option>
                       {(Array.isArray(insumos) ? insumos : []).map((i) => (
@@ -358,10 +356,10 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
                       placeholder="Qtd"
                       value={row.quantidade}
                       onChange={(e) => updateFicha(row.key, { quantidade: e.target.value })}
-                      className="h-9 w-20 rounded-lg border border-zinc-800 bg-zinc-950 px-2 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                      className="h-9 w-20 rounded-lg border border-line bg-canvas px-2 text-xs text-ink focus:border-accent focus:outline-none"
                     />
-                    <span className="w-6 text-xs text-zinc-500">{ins?.unidade_medida}</span>
-                    <button type="button" onClick={() => removeFicha(row.key)} className="text-red-400 hover:text-red-300" title="Remover">
+                    <span className="w-6 text-xs text-muted">{ins?.unidade_medida}</span>
+                    <button type="button" onClick={() => removeFicha(row.key)} className="text-danger hover:text-danger" title="Remover">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -376,25 +374,25 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
               id="disponibilidade"
               checked={disponibilidade}
               onChange={(e) => setDisponibilidade(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
+              className="h-4 w-4 rounded border-line bg-canvas text-accent focus:ring-accent accent-accent"
             />
-            <label htmlFor="disponibilidade" className="text-xs text-zinc-300 cursor-pointer font-medium">
+            <label htmlFor="disponibilidade" className="text-xs text-soft cursor-pointer font-medium">
               Produto Disponível para Venda
             </label>
           </div>
 
-          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-zinc-800">
+          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-line">
             <Button
               variant="outline"
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              className="border-line text-soft hover:text-ink"
             >
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : productToEdit ? "Salvar Alterações" : "Cadastrar Produto"}
+              {loading ? "Salvando..." : productToEdit ? "Salvar alterações" : "Cadastrar produto"}
             </Button>
           </div>
         </form>
@@ -408,6 +406,6 @@ export function ProductForm({ onClose, productToEdit }: ProductFormProps) {
           mutate("/catalog/categorias/")
         }}
       />
-    </div>
+    </Dialog>
   )
 }

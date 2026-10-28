@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import { mutate } from "swr"
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
@@ -46,13 +48,7 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
       onClose()
     } catch (err: any) {
       console.error("Erro ao registrar movimentação:", err)
-      const data = err.response?.data
-      let message = "Erro ao processar movimentação de estoque."
-      if (typeof data === "object" && data !== null) {
-        message = Object.entries(data)
-          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
-          .join(" | ")
-      }
+      const message = apiErrorMessage(err, "Não foi possível registrar a movimentação.")
       setErrorMsg(message)
     } finally {
       setLoading(false)
@@ -60,23 +56,23 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <h2 className="text-lg font-bold text-zinc-100 mb-4">Movimentar Estoque</h2>
+    <Dialog label="Movimentar estoque" onClose={onClose}>
+      <div className="w-full max-w-md rounded-3xl bg-surface border border-line p-6 shadow-2xl   duration-200">
+        <h2 className="text-3xl text-ink">Movimentar estoque</h2>
 
         {errorMsg && (
-          <div className="mb-4 rounded-xl bg-red-500/10 p-3 text-xs text-red-400 border border-red-500/20">
+          <div className="mb-4 rounded-xl bg-danger/10 p-3 text-xs text-danger border border-danger/20">
             {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-1" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-1" className="mb-1.5 block text-sm font-semibold text-ink">
               Insumo
             </label>
             <select id="f-appinventorycomponentsMovimentacaoForm-1"
-              className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:border-yellow-400"
+              className="flex h-10 w-full rounded-xl border border-line bg-canvas px-3 py-2 text-sm text-ink  focus-visible:outline-none focus-visible:border-accent"
               value={insumoId}
               onChange={(e) => setInsumoId(e.target.value)}
               required
@@ -90,16 +86,16 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
           </div>
 
           <div>
-            <label className="mb-1.5 block font-semibold text-zinc-300">
-              Tipo de Movimentação
+            <label className="mb-1.5 block text-sm font-semibold text-ink">
+              Tipo
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className={`py-2.5 text-xs font-bold rounded-xl border transition-all ${
+                className={`py-2.5 text-xs font-bold rounded-xl border transition-colors ${
                   tipo === "ENTRADA"
-                    ? "bg-green-500/20 border-green-500 text-green-400 shadow-sm"
-                    : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-800"
+                    ? "bg-success/20 border-success text-success "
+                    : "border-line bg-canvas text-soft hover:bg-raised"
                 }`}
                 onClick={() => {
                   setTipo("ENTRADA")
@@ -110,10 +106,10 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
               </button>
               <button
                 type="button"
-                className={`py-2.5 text-xs font-bold rounded-xl border transition-all ${
+                className={`py-2.5 text-xs font-bold rounded-xl border transition-colors ${
                   tipo === "SAIDA"
-                    ? "bg-red-500/20 border-red-500 text-red-400 shadow-sm"
-                    : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-800"
+                    ? "bg-danger/20 border-danger text-danger "
+                    : "border-line bg-canvas text-soft hover:bg-raised"
                 }`}
                 onClick={() => {
                   setTipo("SAIDA")
@@ -126,11 +122,11 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
           </div>
 
           <div>
-            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-2" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-2" className="mb-1.5 block text-sm font-semibold text-ink">
               Motivo da Movimentação
             </label>
             <select id="f-appinventorycomponentsMovimentacaoForm-2"
-              className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:border-yellow-400"
+              className="flex h-10 w-full rounded-xl border border-line bg-canvas px-3 py-2 text-sm text-ink  focus-visible:outline-none focus-visible:border-accent"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               required
@@ -152,7 +148,7 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
           </div>
 
           <div>
-            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-3" className="mb-1.5 block font-semibold text-zinc-300">
+            <label htmlFor="f-appinventorycomponentsMovimentacaoForm-3" className="mb-1.5 block text-sm font-semibold text-ink">
               Quantidade ({selectedInsumo?.unidade_medida || "UN"})
             </label>
             <Input id="f-appinventorycomponentsMovimentacaoForm-3"
@@ -165,22 +161,22 @@ export function MovimentacaoForm({ onClose, insumos }: MovimentacaoFormProps) {
             />
           </div>
 
-          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-zinc-800">
+          <div className="mt-6 flex justify-end space-x-3 pt-3 border-t border-line">
             <Button
               variant="outline"
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="border-zinc-800 text-zinc-400 hover:text-zinc-200"
+              className="border-line text-soft hover:text-ink"
             >
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Registrando..." : "Confirmar Movimentação"}
+              {loading ? "Registrando..." : "Confirmar movimentação"}
             </Button>
           </div>
         </form>
       </div>
-    </div>
+    </Dialog>
   )
 }

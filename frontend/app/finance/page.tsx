@@ -1,6 +1,9 @@
 "use client";
 
 import { notify, askConfirm } from "@/components/ui/feedback";
+import { buttonClass } from "@/components/ui/button"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import React, { useState, useMemo } from "react";
 import useSWR, { mutate } from "swr";
 import { api, fetcher, fetcherResults } from "@/services/api";
@@ -27,6 +30,7 @@ import {
   Download,
 } from "lucide-react";
 import { downloadCsv, csvMoney } from "@/lib/csv";
+import { PageHeader, StatStrip, StatusTag, TabBar } from "@/components/ui/blocks";
 import {
   AreaChart,
   Area,
@@ -305,13 +309,7 @@ export default function FinancePage() {
       mutate(summaryUrl);
       mutate(lancamentosUrl);
     } catch (err: any) {
-      const errData = err.response?.data;
-      if (typeof errData === "object") {
-        const firstKey = Object.keys(errData)[0];
-        setErrorMessage(`${firstKey}: ${errData[firstKey]}`);
-      } else {
-        setErrorMessage("Erro ao salvar lançamento financeiro.");
-      }
+      setErrorMessage(apiErrorMessage(err, "Não foi possível salvar o lançamento. Confira os dados."));
     } finally {
       setSaving(false);
     }
@@ -325,7 +323,7 @@ export default function FinancePage() {
       mutate(summaryUrl);
       mutate(lancamentosUrl);
     } catch (err: any) {
-      notify("Erro ao excluir lançamento: " + (err.response?.data?.detail || "Erro inesperado"));
+      notify(apiErrorMessage(err, "Não foi possível excluir o lançamento."));
     }
   };
 
@@ -343,7 +341,7 @@ export default function FinancePage() {
       setNewCatDesc("");
       mutate("/finance/categories/");
     } catch (err: any) {
-      notify("Erro ao cadastrar categoria: " + (err.response?.data?.name || "Já existe ou inválida"));
+      notify(apiErrorMessage(err, "Não foi possível cadastrar a categoria. O nome pode já existir."));
     }
   };
 
@@ -354,7 +352,7 @@ export default function FinancePage() {
       await api.delete(`/finance/categories/${id}/`);
       mutate("/finance/categories/");
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Não é possível excluir uma categoria que possui lançamentos.");
+      notify(apiErrorMessage(err, "Não é possível excluir uma categoria que possui lançamentos."));
     }
   };
 
@@ -363,210 +361,130 @@ export default function FinancePage() {
   const saldoLiquido = Number(resumo?.saldo) || 0;
 
   return (
-    <div className="flex min-h-full w-full flex-col bg-zinc-950 p-6 text-zinc-100">
+    <div className="flex min-h-full w-full flex-col bg-canvas p-6 text-ink">
       {/* Top Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400 font-bold text-zinc-950 shadow-lg shadow-yellow-400/20">
-              <DollarSign className="h-5 w-5" />
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-              Gestão Financeira
-            </h1>
-          </div>
-          <p className="mt-1 text-xs text-zinc-400">
-            Controle completo de receitas, despesas, conciliação e fluxo de caixa.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => {
-              mutate(summaryUrl);
-              mutate(lancamentosUrl);
-            }}
-            className="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-300 transition-all hover:bg-zinc-800 hover:text-zinc-100"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Atualizar</span>
-          </button>
-
-          <button
-            onClick={() => setShowCatModal(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-300 transition-all hover:bg-zinc-800 hover:text-zinc-100"
-          >
-            <Layers className="h-3.5 w-3.5 text-yellow-400" />
-            <span>Categorias</span>
-          </button>
-
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-yellow-400 px-4 py-2 text-xs font-bold text-zinc-950 shadow-md shadow-yellow-400/20 transition-all hover:bg-yellow-300"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Novo Lançamento</span>
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {/* Receita Total */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-950/40 bg-zinc-900/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Receitas Realizadas
-            </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-              <ArrowUpRight className="h-4 w-4" />
-            </span>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black tracking-tight text-emerald-400">
-              {loadingResumo ? "..." : formatCurrency(totalReceitas)}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center text-xs text-zinc-500">
-            <span>Entradas de pedidos e vendas</span>
-          </div>
-        </div>
-
-        {/* Despesa Total */}
-        <div className="relative overflow-hidden rounded-2xl border border-rose-950/40 bg-zinc-900/90 p-5 shadow-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-400">
-              Despesas &amp; Custos
-            </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400">
-              <ArrowDownRight className="h-4 w-4" />
-            </span>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black tracking-tight text-rose-400">
-              {loadingResumo ? "..." : formatCurrency(totalDespesas)}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center text-xs text-zinc-500">
-            <span>Insumos, compras e custos operacionais</span>
-          </div>
-        </div>
-
-        {/* Saldo Líquido */}
-        <div
-          className={`relative overflow-hidden rounded-2xl border bg-zinc-900/90 p-5 shadow-xl ${
-            saldoLiquido >= 0 ? "border-yellow-400/20" : "border-rose-500/30"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-yellow-400">
-              Saldo Líquido
-            </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
-              <Wallet className="h-4 w-4" />
-            </span>
-          </div>
-          <div className="mt-3">
-            <span
-              className={`text-2xl font-black tracking-tight ${
-                saldoLiquido >= 0 ? "text-yellow-400" : "text-rose-400"
-              }`}
+      <PageHeader
+        title="Financeiro"
+        description="Receitas, despesas e fluxo de caixa do período."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                mutate(summaryUrl);
+                mutate(lancamentosUrl);
+              }}
+              className={buttonClass("outline")}
             >
-              {loadingResumo ? "..." : formatCurrency(saldoLiquido)}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center text-xs text-zinc-500">
-            <span>{saldoLiquido >= 0 ? "Resultado positivo no período" : "Déficit no período selecionado"}</span>
-          </div>
-        </div>
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCatModal(true)}
+              className={buttonClass("outline")}
+            >
+              <Layers className="h-4 w-4" />
+              Categorias
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowNewModal(true)}
+              className={buttonClass("primary")}
+            >
+              <Plus className="h-4 w-4" />
+              Novo lançamento
+            </button>
+          </>
+        }
+      />
+
+      <div className="my-6">
+        <StatStrip
+          items={[
+            { label: "Receitas", value: loadingResumo ? "…" : formatCurrency(totalReceitas), hint: "Entradas de pedidos e vendas", tone: "success" },
+            { label: "Despesas", value: loadingResumo ? "…" : formatCurrency(totalDespesas), hint: "Insumos, compras e custos", tone: "danger" },
+            {
+              label: "Saldo do período",
+              value: loadingResumo ? "…" : formatCurrency(saldoLiquido),
+              hint: saldoLiquido >= 0 ? "Resultado positivo" : "Resultado negativo",
+              tone: saldoLiquido >= 0 ? "accent" : "danger",
+            },
+          ]}
+        />
       </div>
 
       {/* Gráfico de Fluxo de Caixa */}
       {chartData.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 p-5 shadow-xl">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-zinc-100">Fluxo Diário: Receitas vs Despesas</h3>
-              <p className="text-xs text-zinc-500">Evolução temporal das movimentações financeiras</p>
-            </div>
+        <section className="mb-8">
+          <div className="mb-4 flex items-end justify-between border-b-2 border-ink pb-2">
+            <h2 className="text-3xl text-ink">Receitas e despesas por dia</h2>
             <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Receitas
+              <span className="flex items-center gap-1.5 text-success font-semibold">
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-success" /> Receitas
               </span>
-              <span className="flex items-center gap-1.5 text-rose-400 font-semibold">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-400" /> Despesas
+              <span className="flex items-center gap-1.5 text-danger font-semibold">
+                <span className="h-2.5 w-2.5 rounded-[2px] bg-danger" /> Despesas
               </span>
             </div>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={11} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--c-line)" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--c-muted)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--c-muted)" fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#18181b",
-                    borderColor: "#3f3f46",
-                    borderRadius: "12px",
-                    color: "#f4f4f5",
+                    backgroundColor: "var(--c-surface)",
+                    borderColor: "var(--c-line-strong)",
+                    borderRadius: "4px",
+                    color: "var(--c-ink)",
                     fontSize: "12px",
                   }}
                   formatter={(val: any) => formatCurrency(val)}
                 />
-                <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />
-                <Bar dataKey="despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Despesas" />
+                <Bar dataKey="receitas" fill="var(--c-success)" radius={[2, 2, 0, 0]} name="Receitas" />
+                <Bar dataKey="despesas" fill="var(--c-danger)" radius={[2, 2, 0, 0]} name="Despesas" />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Barra de Filtros e Busca */}
-      <div className="mb-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 p-4 shadow-xl">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Abas Rápidas de Período */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {[
-              { key: "hoje", label: "Hoje" },
-              { key: "7d", label: "7 Dias" },
-              { key: "mes", label: "Mês Atual" },
-              { key: "ano", label: "Ano" },
-              { key: "todos", label: "Tudo" },
-              { key: "custom", label: "Personalizado" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setPeriodo(tab.key as any)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-                  periodo === tab.key
-                    ? "bg-yellow-400 text-zinc-950 shadow-md shadow-yellow-400/20"
-                    : "border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <TabBar
+            label="Período"
+            value={periodo as string}
+            onChange={(v) => setPeriodo(v as any)}
+            tabs={[
+              { value: "hoje", label: "Hoje" },
+              { value: "7d", label: "7 dias" },
+              { value: "mes", label: "Mês atual" },
+              { value: "ano", label: "Ano" },
+              { value: "todos", label: "Tudo" },
+              { value: "custom", label: "Personalizado" },
+            ]}
+          />
 
-          {/* Filtro por Tipo */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500">Tipo:</span>
             <select
+              aria-label="Filtrar por tipo"
               value={tipoFiltro}
               onChange={(e) => setTipoFiltro(e.target.value as any)}
-              className="h-8 rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-200 focus:border-yellow-400 focus:outline-none"
+              className="h-10 rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
             >
-              <option value="todos">Todos os tipos</option>
-              <option value="receita">Apenas Receitas</option>
-              <option value="despesa">Apenas Despesas</option>
+              <option value="todos">Receitas e despesas</option>
+              <option value="receita">Só receitas</option>
+              <option value="despesa">Só despesas</option>
             </select>
-
-            {/* Filtro por Categoria */}
             <select
+              aria-label="Filtrar por categoria"
               value={categoriaFiltro}
               onChange={(e) => setCategoriaFiltro(e.target.value)}
-              className="h-8 rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-200 focus:border-yellow-400 focus:outline-none"
+              className="h-10 rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
             >
               <option value="">Todas as categorias</option>
               {categories.map((c) => (
@@ -580,131 +498,121 @@ export default function FinancePage() {
 
         {/* Linha adicional se período personalizado */}
         {periodo === "custom" && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">De:</span>
+              <span className="text-xs text-soft">De:</span>
               <input
                 type="date"
                 value={dataInicio}
                 onChange={(e) => setDataInicio(e.target.value)}
-                className="h-8 rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-200 focus:border-yellow-400 focus:outline-none"
+                className="h-10 rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Até:</span>
+              <span className="text-xs text-soft">Até:</span>
               <input
                 type="date"
                 value={dataFim}
                 onChange={(e) => setDataFim(e.target.value)}
-                className="h-8 rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-200 focus:border-yellow-400 focus:outline-none"
+                className="h-10 rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
               />
             </div>
           </div>
         )}
 
         {/* Busca por Texto */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted" aria-hidden />
           <input
             type="text"
-            placeholder="Buscar por descrição, categoria ou responsável..."
+            placeholder="Buscar por descrição, categoria ou responsável"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-950 pl-9 pr-4 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-yellow-400 focus:outline-none"
+            aria-label="Buscar lançamentos" className="h-10 w-full rounded-lg border border-line-strong bg-canvas pl-9 pr-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
         </div>
       </div>
 
       {/* Tabela de Lançamentos */}
-      <div className="flex-1 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/80 shadow-xl">
-        <div className="border-b border-zinc-800/80 px-5 py-3.5 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-zinc-100">
-            Lançamentos ({filteredLancamentos.length})
+      <div className="flex-1">
+        <div className="flex items-baseline justify-between border-b-2 border-ink pb-2">
+          <h2 className="text-3xl text-ink">
+            Lançamentos <span className="font-display text-accent">{filteredLancamentos.length}</span>
           </h2>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-xs text-zinc-500">
-              Exibindo dados sincronizados com o backend
-            </span>
             <button
               type="button"
               onClick={exportCsv}
               disabled={filteredLancamentos.length === 0}
-              className="flex items-center gap-1.5 rounded-xl border border-yellow-400/60 bg-yellow-400/10 px-3 py-1.5 text-xs font-bold text-yellow-400 hover:bg-yellow-400 hover:text-zinc-950 transition-colors disabled:opacity-40"
+              className={buttonClass("outline")}
             >
               <Download className="h-3.5 w-3.5" />
-              Exportar Relatório (CSV)
+              Exportar relatório (CSV)
             </button>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-zinc-800/60 bg-zinc-950/40 text-xs uppercase tracking-wider text-zinc-400">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b-2 border-ink text-sm font-bold text-ink">
               <tr>
                 <th className="py-3 px-4">Data</th>
                 <th className="py-3 px-4">Tipo</th>
                 <th className="py-3 px-4">Descrição</th>
                 <th className="py-3 px-4">Categoria</th>
-                <th className="py-3 px-4">Forma Pagto</th>
+                <th className="py-3 px-4">Pagamento</th>
                 <th className="py-3 px-4">Responsável</th>
                 <th className="py-3 px-4 text-right">Valor</th>
                 <th className="py-3 px-4 text-center">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/40 text-zinc-300">
+            <tbody className="divide-y divide-line/40 text-soft">
               {loadingLancamentos ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-zinc-500">
+                  <td colSpan={8} className="py-8 text-center text-muted">
                     Carregando lançamentos...
                   </td>
                 </tr>
               ) : filteredLancamentos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-zinc-500">
+                  <td colSpan={8} className="py-12 text-center text-muted">
                     Nenhum lançamento encontrado para os filtros selecionados.
                   </td>
                 </tr>
               ) : (
                 filteredLancamentos.map((l) => (
-                  <tr key={l.id} className="transition-colors hover:bg-zinc-800/40">
-                    <td className="py-3 px-4 font-mono text-zinc-400">{formatDate(l.date)}</td>
+                  <tr key={l.id} className="transition-colors hover:bg-raised/40">
+                    <td className="whitespace-nowrap py-3 px-4 text-soft">{formatDate(l.date)}</td>
                     <td className="py-3 px-4">
-                      {l.type === "receita" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/20">
-                          <ArrowUpRight className="h-3 w-3" /> Receita
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-bold text-rose-400 border border-rose-500/20">
-                          <ArrowDownRight className="h-3 w-3" /> Despesa
-                        </span>
-                      )}
+                      <StatusTag tone={l.type === "receita" ? "success" : "danger"}>
+                        {l.type === "receita" ? "Receita" : "Despesa"}
+                      </StatusTag>
                     </td>
-                    <td className="py-3 px-4 font-medium text-zinc-100">
+                    <td className="py-3 px-4 font-medium text-ink">
                       {l.description}
                       {l.pedido && (
-                        <span className="ml-2 rounded-md bg-yellow-400/10 px-1.5 py-0.5 text-xs font-bold text-yellow-400">
-                          Pedido #{l.pedido}
-                        </span>
+                        <span className="ml-2 text-xs font-semibold text-muted">pedido {l.pedido}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-zinc-300">
+                    <td className="py-3 px-4 text-soft">
                       {l.category_name || (l.category_details ? l.category_details.name : `Cat #${l.category}`)}
                     </td>
-                    <td className="py-3 px-4 text-zinc-400">
+                    <td className="py-3 px-4 text-soft">
                       {PAYMENT_LABELS[l.payment_method] || l.payment_method}
                     </td>
-                    <td className="py-3 px-4 text-zinc-400">
+                    <td className="py-3 px-4 text-soft">
                       {l.responsible_name || "Sistema"}
                     </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-zinc-100">
-                      <span className={l.type === "receita" ? "text-emerald-400" : "text-rose-400"}>
-                        {l.type === "receita" ? "+" : "-"} {formatCurrency(l.value)}
+                    <td className="whitespace-nowrap py-3 px-4 text-right">
+                      <span className={`font-display text-2xl ${l.type === "receita" ? "text-success" : "text-danger"}`}>
+                        {l.type === "receita" ? "+" : "−"}
+                        {formatCurrency(l.value)}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => handleDeleteLancamento(l.id)}
-                        className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                        className="rounded-lg p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                         title="Excluir lançamento"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -720,22 +628,22 @@ export default function FinancePage() {
 
       {/* Modal Novo Lançamento */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+        <Dialog label="Novo lançamento" onClose={() => setShowNewModal(false)}>
+          <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl">
             <button
               onClick={() => setShowNewModal(false)}
-              className="absolute right-4 top-4 rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              className="absolute right-4 top-4 rounded-xl p-1.5 text-soft hover:bg-raised hover:text-ink"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <h3 className="mb-1 text-lg font-bold text-zinc-100">Registrar Novo Lançamento</h3>
-            <p className="mb-4 text-xs text-zinc-400">
+            <h3 className="text-3xl text-ink">Novo lançamento</h3>
+            <p className="mb-4 text-xs text-soft">
               Adicione uma receita ou despesa manual ao fluxo financeiro.
             </p>
 
             {errorMessage && (
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -744,7 +652,7 @@ export default function FinancePage() {
             <form onSubmit={handleCreateLancamento} className="space-y-4 text-xs">
               {/* Toggle Tipo */}
               <div>
-                <label className="mb-1.5 block font-semibold text-zinc-300">Tipo de Movimentação</label>
+                <label className="mb-1.5 block text-sm font-semibold text-ink">Tipo</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -752,10 +660,10 @@ export default function FinancePage() {
                       setFormType("receita");
                       setFormCategory("");
                     }}
-                    className={`flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold transition-all ${
+                    className={`flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold transition-colors ${
                       formType === "receita"
-                        ? "bg-emerald-500 text-zinc-950 shadow-md shadow-emerald-500/20"
-                        : "border border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-800"
+                        ? "bg-success text-accent-ink "
+                        : "border border-line bg-canvas text-soft hover:bg-raised"
                     }`}
                   >
                     <ArrowUpRight className="h-4 w-4" /> Receita
@@ -766,10 +674,10 @@ export default function FinancePage() {
                       setFormType("despesa");
                       setFormCategory("");
                     }}
-                    className={`flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold transition-all ${
+                    className={`flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold transition-colors ${
                       formType === "despesa"
-                        ? "bg-rose-500 text-zinc-950 shadow-md shadow-rose-500/20"
-                        : "border border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-800"
+                        ? "bg-danger text-accent-ink "
+                        : "border border-line bg-canvas text-soft hover:bg-raised"
                     }`}
                   >
                     <ArrowDownRight className="h-4 w-4" /> Despesa
@@ -780,7 +688,7 @@ export default function FinancePage() {
               {/* Valor e Data */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="f-appfinancepage-1" className="mb-1 block font-semibold text-zinc-300">Valor (R$)*</label>
+                  <label htmlFor="f-appfinancepage-1" className="mb-1.5 block text-sm font-semibold text-ink">Valor (R$)*</label>
                   <input id="f-appfinancepage-1"
                     type="number"
                     step="0.01"
@@ -789,17 +697,17 @@ export default function FinancePage() {
                     placeholder="0.00"
                     value={formValue}
                     onChange={(e) => setFormValue(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-yellow-400 focus:outline-none"
+                    className="h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label htmlFor="f-appfinancepage-2" className="mb-1 block font-semibold text-zinc-300">Data*</label>
+                  <label htmlFor="f-appfinancepage-2" className="mb-1.5 block text-sm font-semibold text-ink">Data*</label>
                   <input id="f-appfinancepage-2"
                     type="date"
                     required
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                    className="h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -807,14 +715,14 @@ export default function FinancePage() {
               {/* Categoria */}
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <label className="font-semibold text-zinc-300">Categoria Financeira*</label>
+                  <label className="font-semibold text-soft">Categoria Financeira*</label>
                   <button
                     type="button"
                     onClick={() => {
                       setShowNewModal(false);
                       setShowCatModal(true);
                     }}
-                    className="text-xs text-yellow-400 hover:underline"
+                    className="text-xs text-accent hover:underline"
                   >
                     + Criar categoria
                   </button>
@@ -823,7 +731,7 @@ export default function FinancePage() {
                   required
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                  className="h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
                 >
                   <option value="">Selecione uma categoria...</option>
                   {categories
@@ -838,24 +746,24 @@ export default function FinancePage() {
 
               {/* Descrição */}
               <div>
-                <label htmlFor="f-appfinancepage-3" className="mb-1 block font-semibold text-zinc-300">Descrição*</label>
+                <label htmlFor="f-appfinancepage-3" className="mb-1.5 block text-sm font-semibold text-ink">Descrição*</label>
                 <input id="f-appfinancepage-3"
                   type="text"
                   required
                   placeholder="Ex: Pagamento Fornecedor de Embalagens"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-yellow-400 focus:outline-none"
+                  className="h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
                 />
               </div>
 
               {/* Forma de Pagamento */}
               <div>
-                <label htmlFor="f-appfinancepage-4" className="mb-1 block font-semibold text-zinc-300">Forma de Pagamento</label>
+                <label htmlFor="f-appfinancepage-4" className="mb-1.5 block text-sm font-semibold text-ink">Forma de pagamento</label>
                 <select id="f-appfinancepage-4"
                   value={formPaymentMethod}
                   onChange={(e) => setFormPaymentMethod(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                  className="h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-ink focus:border-accent focus:outline-none"
                 >
                   {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -866,49 +774,49 @@ export default function FinancePage() {
               </div>
 
               {/* Botões de Ação */}
-              <div className="mt-6 flex justify-end gap-2 border-t border-zinc-800/60 pt-4">
+              <div className="mt-6 flex justify-end gap-2 border-t border-line/60 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="rounded-xl border border-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                  className="rounded-xl border border-line px-4 py-2 text-xs font-semibold text-soft hover:bg-raised hover:text-ink"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-1.5 rounded-xl bg-yellow-400 px-5 py-2 text-xs font-bold text-zinc-950 shadow-md shadow-yellow-400/20 hover:bg-yellow-300 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-xl bg-accent px-5 py-2 text-xs font-bold text-accent-ink  hover:bg-accent-hover disabled:opacity-50"
                 >
-                  {saving ? "Salvando..." : "Salvar Lançamento"}
+                  {saving ? "Salvando..." : "Salvar lançamento"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {/* Modal Gerenciar Categorias */}
       {showCatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-xl rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl max-h-[90vh] flex flex-col">
+        <Dialog label="Categorias financeiras" onClose={() => setShowCatModal(false)}>
+          <div className="relative w-full max-w-xl rounded-2xl border border-line bg-surface p-6 shadow-2xl max-h-[90vh] flex flex-col">
             <button
               onClick={() => setShowCatModal(false)}
-              className="absolute right-4 top-4 rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              className="absolute right-4 top-4 rounded-xl p-1.5 text-soft hover:bg-raised hover:text-ink"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <h3 className="mb-1 text-lg font-bold text-zinc-100">Categorias Financeiras</h3>
-            <p className="mb-4 text-xs text-zinc-400">
+            <h3 className="text-3xl text-ink">Categorias financeiras</h3>
+            <p className="mb-4 text-xs text-soft">
               Gerencie as categorias de receitas e despesas do estabelecimento.
             </p>
 
             {/* Formulário Nova Categoria */}
             <form
               onSubmit={handleCreateCategory}
-              className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-xs space-y-3"
+              className="mb-4 rounded-xl border border-line bg-canvas p-4 text-xs space-y-3"
             >
-              <h4 className="font-bold text-zinc-200">Adicionar Nova Categoria</h4>
+              <h4 className="font-bold text-ink">Adicionar categoria</h4>
               <div className="grid grid-cols-3 gap-2">
                 <input
                   type="text"
@@ -916,12 +824,12 @@ export default function FinancePage() {
                   placeholder="Nome (ex: Marketing)"
                   value={newCatName}
                   onChange={(e) => setNewCatName(e.target.value)}
-                  className="col-span-2 h-9 rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-yellow-400 focus:outline-none"
+                  className="col-span-2 h-9 rounded-xl border border-line bg-surface px-3 text-xs text-ink placeholder:text-faint focus:border-accent focus:outline-none"
                 />
                 <select
                   value={newCatType}
                   onChange={(e) => setNewCatType(e.target.value as any)}
-                  className="h-9 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 text-xs text-zinc-100 focus:border-yellow-400 focus:outline-none"
+                  className="h-9 rounded-xl border border-line bg-surface px-2.5 text-xs text-ink focus:border-accent focus:outline-none"
                 >
                   <option value="despesa">Despesa</option>
                   <option value="receita">Receita</option>
@@ -933,11 +841,11 @@ export default function FinancePage() {
                   placeholder="Descrição opcional..."
                   value={newCatDesc}
                   onChange={(e) => setNewCatDesc(e.target.value)}
-                  className="flex-1 h-9 rounded-xl border border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-yellow-400 focus:outline-none"
+                  className="flex-1 h-9 rounded-xl border border-line bg-surface px-3 text-xs text-ink placeholder:text-faint focus:border-accent focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="flex items-center gap-1 rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-bold text-zinc-950 hover:bg-yellow-300"
+                  className="flex items-center gap-1 rounded-xl bg-accent px-3.5 py-2 text-xs font-bold text-accent-ink hover:bg-accent-hover"
                 >
                   <Plus className="h-3.5 w-3.5" /> Adicionar
                 </button>
@@ -946,32 +854,32 @@ export default function FinancePage() {
 
             {/* Lista de Categorias */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-bold text-soft   mb-2">
                 Categorias Cadastradas ({categories.length})
               </h4>
               {categories.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-3 text-xs"
+                  className="flex items-center justify-between rounded-xl border border-line/80 bg-canvas/60 p-3 text-xs"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-zinc-200">{c.name}</span>
+                      <span className="font-bold text-ink">{c.name}</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${
+                        className={`rounded-md px-2 py-0.5 text-xs font-bold  ${
                           c.type === "receita"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            ? "bg-success/10 text-success border border-success/20"
+                            : "bg-danger/10 text-danger border border-danger/20"
                         }`}
                       >
                         {c.type}
                       </span>
                     </div>
-                    {c.description && <p className="text-xs text-zinc-500 mt-0.5">{c.description}</p>}
+                    {c.description && <p className="text-xs text-muted mt-0.5">{c.description}</p>}
                   </div>
                   <button
                     onClick={() => handleDeleteCategory(c.id)}
-                    className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                    className="rounded-lg p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                     title="Excluir categoria"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -980,17 +888,17 @@ export default function FinancePage() {
               ))}
             </div>
 
-            <div className="mt-4 flex justify-end border-t border-zinc-800/60 pt-3">
+            <div className="mt-4 flex justify-end border-t border-line/60 pt-3">
               <button
                 type="button"
                 onClick={() => setShowCatModal(false)}
-                className="rounded-xl bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700"
+                className="rounded-xl bg-raised px-4 py-2 text-xs font-semibold text-ink hover:bg-line-strong"
               >
                 Fechar
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

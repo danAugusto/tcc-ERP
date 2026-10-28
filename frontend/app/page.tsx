@@ -2,34 +2,18 @@
 
 import React, { useState } from "react";
 import useSWR from "swr";
-import { 
-  DollarSign, 
-  ShoppingBag, 
-  TrendingUp, 
-  Clock, 
-  AlertTriangle,
-  Target,
-  Filter,
-  Calendar,
-  Layers,
-  PieChart as PieIcon,
-  BarChart3,
-} from "lucide-react";
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  CartesianGrid, 
-  PieChart, 
-  Pie, 
-  Cell 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
 } from "recharts";
 import { fetcher } from "@/services/api";
 import { Header } from "@/components/dashboard/Header";
-import { KpiCard } from "@/components/dashboard/KpiCard";
+import { StatStrip, TabBar } from "@/components/ui/blocks";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { CriticalStock } from "@/components/dashboard/CriticalStock";
 import { InventoryControl } from "@/components/dashboard/InventoryControl";
@@ -56,7 +40,8 @@ interface Insumo {
   estoque_minimo: number | string;
 }
 
-const COLORS_CANAL = ["#eab308", "#3b82f6", "#10b981", "#a855f7"];
+const CANAL_LABEL: Record<string, string> = { mesa: "Mesa", balcao: "Balcão", delivery: "Delivery", retirada: "Retirada" };
+const brl = (v: number | string) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v) || 0);
 
 export default function DashboardPage() {
   const [periodo, setPeriodo] = useState<"hoje" | "7dias" | "mes_atual" | "mes_passado">("mes_atual");
@@ -80,245 +65,125 @@ export default function DashboardPage() {
   const faturamentoMesAtual = metricas?.faturamento_mes_atual || 0;
   const progressoMeta = metricas?.progresso_meta_percentual || 0;
 
-  const dynamicKpiCards = [
-    {
-      title: "Total Vendas",
-      value: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalRevenue),
-      icon: DollarSign,
-      iconClassName: "text-yellow-400",
-      footer: {
-        text: periodo === "hoje" ? "Vendas de hoje" : `Período: ${({ "7dias": "últimos 7 dias", mes_atual: "este mês", mes_passado: "mês passado" } as Record<string, string>)[periodo] ?? periodo}`,
-        className: "text-emerald-400 font-medium",
-      },
-    },
-    {
-      title: "Pedidos Realizados",
-      value: String(totalOrdersCount),
-      icon: ShoppingBag,
-      iconClassName: "text-yellow-400",
-      footer: {
-        text: `${totalOrdersCount} pedidos no período`,
-        className: "text-zinc-400",
-      },
-    },
-    {
-      title: "Ticket Médio",
-      value: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(avgTicket),
-      icon: TrendingUp,
-      iconClassName: "text-yellow-400",
-      footer: {
-        text: "Média calculada por venda",
-        className: "text-zinc-400",
-      },
-    },
-    {
-      title: "Estoque Crítico",
-      value: `${criticalStockCount} itens`,
-      icon: AlertTriangle,
-      iconClassName: criticalStockCount > 0 ? "text-red-400" : "text-yellow-400",
-      footer: {
-        text: criticalStockCount > 0 ? "Reposição imediata" : "Estoque regular",
-        className: criticalStockCount > 0 ? "text-red-400 font-bold" : "text-green-400",
-      },
-    },
-  ];
+  const periodoLabel: Record<string, string> = {
+    hoje: "hoje",
+    "7dias": "nos últimos 7 dias",
+    mes_atual: "neste mês",
+    mes_passado: "no mês passado",
+  };
+
+  const canais = Array.isArray(metricas?.vendas_por_canal) ? metricas.vendas_por_canal : [];
+  const maxCanal = Math.max(1, ...canais.map((c) => Number(c.quantidade) || 0));
+  const meta = Math.min(progressoMeta, 100);
 
   return (
     <div className="flex-1 overflow-y-auto">
       <Header />
 
-      <main className="space-y-6 p-6 lg:p-8">
-        {/* Barra de Filtro de Período e Metas */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-100 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-yellow-400" />
-              Visão Geral &amp; Métricas Analíticas
-            </h2>
-            <p className="text-xs text-zinc-400">
-              Acompanhamento de faturamento, desempenho por canal e metas operacionais.
+      <main className="space-y-8 p-6 lg:p-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <TabBar
+            label="Período"
+            value={periodo}
+            onChange={setPeriodo}
+            tabs={[
+              { value: "hoje", label: "Hoje" },
+              { value: "7dias", label: "7 dias" },
+              { value: "mes_atual", label: "Este mês" },
+              { value: "mes_passado", label: "Mês passado" },
+            ]}
+          />
+          {isLoading && <p className="text-sm text-muted">Atualizando números...</p>}
+        </div>
+
+        <StatStrip
+          items={[
+            { label: "Vendas", value: brl(totalRevenue), hint: `Faturado ${periodoLabel[periodo]}`, tone: "accent" },
+            { label: "Pedidos", value: totalOrdersCount, hint: `Fechados ${periodoLabel[periodo]}` },
+            { label: "Ticket médio", value: brl(avgTicket), hint: "Valor médio por pedido" },
+            {
+              label: "Estoque crítico",
+              value: criticalStockCount,
+              hint: criticalStockCount > 0 ? "Insumos no mínimo ou abaixo: repor" : "Todos os insumos acima do mínimo",
+              tone: criticalStockCount > 0 ? "danger" : "success",
+            },
+          ]}
+        />
+
+        <section aria-label="Meta de faturamento do mês">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-3xl text-ink">Meta do mês</h2>
+            <p className="text-sm text-muted">
+              <span className="font-display mr-2 text-4xl text-ink">{brl(faturamentoMesAtual)}</span>
+              de {brl(metaFaturamento)}
             </p>
           </div>
-
-          <div className="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1">
-            <button
-              onClick={() => setPeriodo("hoje")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                periodo === "hoje"
-                  ? "bg-yellow-400 text-zinc-950 shadow-md font-bold"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Hoje
-            </button>
-            <button
-              onClick={() => setPeriodo("7dias")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                periodo === "7dias"
-                  ? "bg-yellow-400 text-zinc-950 shadow-md font-bold"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Últimos 7 dias
-            </button>
-            <button
-              onClick={() => setPeriodo("mes_atual")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                periodo === "mes_atual"
-                  ? "bg-yellow-400 text-zinc-950 shadow-md font-bold"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Este Mês
-            </button>
-            <button
-              onClick={() => setPeriodo("mes_passado")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                periodo === "mes_passado"
-                  ? "bg-yellow-400 text-zinc-950 shadow-md font-bold"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Mês Passado
-            </button>
+          <div
+            className="relative mt-3 h-4 w-full bg-raised"
+            role="progressbar"
+            aria-valuenow={meta}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Progresso da meta mensal"
+          >
+            <div className="h-full bg-accent transition-[width] duration-700" style={{ width: `${meta}%` }} />
+            {[25, 50, 75].map((m) => (
+              <span key={m} className="absolute top-0 h-full w-px bg-canvas" style={{ left: `${m}%` }} aria-hidden />
+            ))}
           </div>
-        </div>
+          <p className="mt-1.5 text-sm text-muted">{progressoMeta}% da meta atingida</p>
+        </section>
 
-        {/* Card de Meta de Faturamento Mensal (Issue #74) */}
-        <div className="rounded-2xl border border-yellow-400/20 bg-gradient-to-r from-zinc-900 via-zinc-900 to-yellow-950/20 p-5 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-yellow-400" />
-                <span className="text-sm font-bold text-zinc-100 uppercase tracking-wider">
-                  Meta de Faturamento Mensal
-                </span>
-                <span className="rounded-full bg-yellow-400/20 px-2 py-0.5 text-xs font-bold text-yellow-400">
-                  {progressoMeta}% atingido
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400">
-                Faturamento acumulado no mês corrente em direção à meta configurada.
-              </p>
-            </div>
-
-            <div className="text-right">
-              <div className="text-lg font-extrabold font-mono text-zinc-100">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(faturamentoMesAtual)}{" "}
-                <span className="text-xs font-normal text-zinc-400">
-                  / {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(metaFaturamento)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Barra de Progresso da Meta */}
-          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-zinc-800 border border-zinc-700/50">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-400 transition-all duration-700 shadow-sm"
-              style={{ width: `${Math.min(progressoMeta, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Grid de KPIs Principais */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {dynamicKpiCards.map((card) => (
-            <KpiCard key={card.title} {...card} />
-          ))}
-        </div>
-
-        {/* Gráficos Analíticos com Recharts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Gráfico 1: Evolução de Faturamento Diário */}
-          <div className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm">
-            <h3 className="text-sm font-bold text-zinc-100 mb-1 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-yellow-400" />
-              Evolução do Faturamento no Período
-            </h3>
-            <p className="text-xs text-zinc-400 mb-4">Total faturado por dia (R$)</p>
-
-            <div className="h-64 w-full">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <section className="lg:col-span-2" aria-label="Faturamento por dia">
+            <h2 className="border-b-2 border-ink pb-2 text-3xl text-ink">Faturamento por dia</h2>
+            <div className="mt-4 h-64 w-full">
               {Array.isArray(metricas?.serie_temporal) && metricas.serie_temporal.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metricas.serie_temporal}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                    <XAxis dataKey="data" stroke="#71717a" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#71717a" fontSize={11} tickLine={false} tickFormatter={(v) => `R$${v}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--c-line)" vertical={false} />
+                    <XAxis dataKey="data" stroke="var(--c-muted)" fontSize={12} tickLine={false} />
+                    <YAxis stroke="var(--c-muted)" fontSize={12} tickLine={false} tickFormatter={(v) => `R$${v}`} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "12px" }}
-                      formatter={(val: any) => [`R$ ${Number(val).toFixed(2)}`, "Faturamento"]}
+                      cursor={{ fill: "var(--c-raised)" }}
+                      contentStyle={{ backgroundColor: "var(--c-surface)", border: "1px solid var(--c-line-strong)", borderRadius: "4px", color: "var(--c-ink)" }}
+                      formatter={(val: any) => [brl(val), "Faturamento"]}
                     />
-                    <Bar dataKey="total" fill="#eab308" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="total" fill="var(--c-accent)" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                  Carregando dados da série temporal...
-                </div>
+                <p className="flex h-full items-center justify-center text-sm text-muted">Sem vendas no período.</p>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Gráfico 2: Vendas por Canal de Atendimento */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-zinc-100 mb-1 flex items-center gap-2">
-                <PieIcon className="h-4 w-4 text-yellow-400" />
-                Vendas por Canal
-              </h3>
-              <p className="text-xs text-zinc-400 mb-4">Mesa, Balcão, Delivery e Retirada</p>
-            </div>
-
-            <div className="h-48 w-full">
-              {Array.isArray(metricas?.vendas_por_canal) && metricas.vendas_por_canal.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={metricas.vendas_por_canal}
-                      dataKey="quantidade"
-                      nameKey="tipo_atendimento"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
-                      paddingAngle={4}
-                    >
-                      {metricas.vendas_por_canal.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS_CANAL[index % COLORS_CANAL.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "12px" }}
-                      formatter={(val: any, name: any) => [`${val} pedidos`, `Canal: ${name}`]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                  Sem dados por canal no período
-                </div>
-              )}
-            </div>
-
-            <div className="mt-2 flex flex-wrap justify-center gap-3 text-xs">
-              {(Array.isArray(metricas?.vendas_por_canal) ? metricas.vendas_por_canal : []).map((canal, idx) => (
-                <div key={canal.tipo_atendimento} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: COLORS_CANAL[idx % COLORS_CANAL.length] }}
-                  />
-                  <span className="capitalize text-zinc-300">
-                    {canal.tipo_atendimento}: <strong>{canal.quantidade}</strong>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <section aria-label="Vendas por canal">
+            <h2 className="border-b-2 border-ink pb-2 text-3xl text-ink">Por canal</h2>
+            {canais.length === 0 ? (
+              <p className="mt-4 text-sm text-muted">Sem vendas por canal no período.</p>
+            ) : (
+              <ul className="mt-4 space-y-4">
+                {canais.map((c) => (
+                  <li key={c.tipo_atendimento}>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-base font-semibold text-ink">{CANAL_LABEL[c.tipo_atendimento] ?? c.tipo_atendimento}</span>
+                      <span className="text-sm text-muted">
+                        <span className="font-display mr-1 text-2xl text-ink">{c.quantidade}</span>
+                        {Number(c.quantidade) === 1 ? "pedido" : "pedidos"} · {brl(c.total)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 bg-raised" aria-hidden>
+                      <div className="h-full bg-accent" style={{ width: `${(Number(c.quantidade) / maxCanal) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
 
-        {/* Seções Operacionais Existentes */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <RecentOrders />
           <CriticalStock />
         </div>

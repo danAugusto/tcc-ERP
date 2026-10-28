@@ -4,9 +4,9 @@ import { homeFor } from "@/lib/roles"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
-import { ChefHat, Lock, User, ArrowRight, AlertCircle, RefreshCw } from "lucide-react"
-import { Button } from "../../components/ui/button"
-import { Input } from "../../components/ui/input"
+import { AlertCircle, RefreshCw } from "lucide-react"
+import { BrandMark } from "../../components/BrandMark"
+import { ThemeToggle } from "../../components/ThemeToggle"
 
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
@@ -49,107 +49,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 px-4 py-12 text-zinc-100">
-      <div className="relative w-full max-w-md">
-        {/* Glow effect behind form */}
-        <div className="absolute -top-10 left-1/2 -z-10 h-64 w-64 -translate-x-1/2 rounded-full bg-yellow-400/10 blur-3xl" />
+    <div className="relative flex min-h-dvh w-full items-center justify-center bg-canvas px-4 py-12 text-ink">
+      <ThemeToggle className="absolute right-4 top-4" />
 
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-2xl backdrop-blur-xl">
-          {/* Logo and Header */}
-          <div className="flex flex-col items-center text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400 text-zinc-950 shadow-xl shadow-yellow-400/20 mb-4">
-              <ChefHat className="h-8 w-8" />
-            </span>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-50">
-              {brandName}
-            </h1>
-            <p className="text-xs text-zinc-400 mt-1">
-              ERP de Gestão, PDV, KDS e Automação
-            </p>
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex items-center gap-4">
+          <BrandMark size={56} />
+          <div className="min-w-0">
+            <h1 className="font-display text-4xl text-ink">{brandName}</h1>
+            <p className="mt-1 text-sm text-muted">Pedidos, cozinha, estoque e caixa</p>
           </div>
+        </div>
+
+        <div className="border-t border-line pt-6">
+          <h2 className="text-3xl">Entrar</h2>
+          <p className="mt-1 text-sm text-muted">Use o usuário e a senha que o gerente cadastrou para você.</p>
 
           {errorMessage && (
-            <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-400">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
+            <p role="alert" className="mt-4 flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm font-semibold text-danger">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {errorMessage}
+            </p>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+          <form onSubmit={handleLogin} className="mt-5 space-y-4">
             <div>
-              <label htmlFor="f-apploginpage-1" className="mb-1.5 block text-xs font-semibold text-zinc-300">
-                Usuário ou E-mail
+              <label htmlFor="login-user" className="mb-1.5 block text-sm font-semibold">
+                Usuário ou e-mail
               </label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
-                <Input id="f-apploginpage-1"
-                  required
-                  autoFocus
-                  placeholder="Ex: admin"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="h-11 pl-10 bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-yellow-400"
-                />
-              </div>
+              <input
+                id="login-user"
+                type="text"
+                autoComplete="username"
+                autoFocus
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                className="h-12 w-full rounded-md border border-line-strong bg-canvas px-3 text-base text-ink focus:border-accent focus:outline-none disabled:opacity-60"
+              />
             </div>
-
             <div>
-              <label htmlFor="f-apploginpage-2" className="mb-1.5 block text-xs font-semibold text-zinc-300">
+              <label htmlFor="login-pass" className="mb-1.5 block text-sm font-semibold">
                 Senha
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
-                <Input id="f-apploginpage-2"
-                  required
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 pl-10 bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-yellow-400"
-                />
-              </div>
+              <input
+                id="login-pass"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                className="h-12 w-full rounded-md border border-line-strong bg-canvas px-3 text-base text-ink focus:border-accent focus:outline-none disabled:opacity-60"
+              />
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="mt-6 h-12 w-full rounded-2xl bg-yellow-400 text-sm font-black text-zinc-950 shadow-lg shadow-yellow-400/20 hover:bg-yellow-300 disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-accent text-base font-bold text-accent-ink hover:bg-accent-hover disabled:opacity-60"
             >
               {loading ? (
-                <div className="flex items-center gap-2">
+                <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Validando Acesso...</span>
-                </div>
+                  Entrando...
+                </>
               ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <span>Entrar no Sistema</span>
-                  <ArrowRight className="h-4 w-4" />
-                </div>
+                "Entrar no sistema"
               )}
-            </Button>
+            </button>
           </form>
 
-          {/* Link para o Cardápio do Cliente */}
-          <div className="mt-4 text-center">
-            <Link
-              href="/cliente"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-yellow-400 hover:text-yellow-300 hover:underline"
-            >
-              <span>É cliente? Acesse o Cardápio Digital</span>
-              <ArrowRight className="h-3 w-3" />
+          <p className="mt-5 border-t border-dashed border-line pt-4 text-center text-sm">
+            <span className="text-muted">É cliente? </span>
+            <Link href="/cliente" className="font-bold underline underline-offset-4">
+              Ver o cardápio e pedir
             </Link>
-          </div>
+          </p>
 
-          {/* Credenciais de demonstração: só em builds de desenvolvimento (NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS=true) */}
           {process.env.NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS === "true" && (
-          <div className="mt-6 border-t border-zinc-800/80 pt-4 text-center">
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              <span className="text-zinc-400 font-semibold">DevMode:</span> <span className="font-mono text-zinc-300 font-bold">superadmin</span> / <span className="font-mono text-zinc-300 font-bold">superadmin</span>
-              <br />
-              <span className="text-zinc-400 font-semibold">Gerente:</span> <span className="font-mono text-zinc-300 font-bold">admin</span> / <span className="font-mono text-zinc-300 font-bold">admin</span>
+            <p className="mt-3 text-center text-xs text-muted">
+              Desenvolvimento: superadmin / superadmin · admin / admin
             </p>
-          </div>
           )}
         </div>
       </div>

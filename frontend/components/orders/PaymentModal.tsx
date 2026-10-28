@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useState } from "react"
+import { brl } from "@/lib/format"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import {
   X,
   Banknote,
@@ -60,7 +63,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
 
   const handleConfirmPayment = async () => {
     if (valorInsuficiente) {
-      setError(`Valor recebido é inferior ao total de R$ ${orderTotal.toFixed(2)}`)
+      setError(`Valor recebido é inferior ao total de ${brl(orderTotal)}`)
       return
     }
 
@@ -79,93 +82,77 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
       onSuccess(res.data)
     } catch (err: any) {
       console.error("Erro ao registrar pagamento:", err)
-      setError(
-        err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "Erro ao processar pagamento."
-      )
+      setError(apiErrorMessage(err, "Não foi possível registrar o pagamento. Tente de novo."))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative overflow-hidden">
+    <Dialog label="Fechar conta" onClose={onClose}>
+      <div className="w-full max-w-lg rounded-xl bg-surface border border-line p-6 shadow-2xl relative overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-5">
+        <div className="flex items-center justify-between border-b border-line/80 pb-4 mb-5">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow-400/20 text-yellow-400">
-              <Receipt className="h-5 w-5" />
-            </div>
             <div>
-              <h2 className="text-lg font-bold text-zinc-100">
-                Fechamento de Conta
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Pedido #{order.id} • Comanda #{order.numero_comanda || "S/N"} •{" "}
-                {order.numero_mesa || "Balcão"}
+              <h2 className="text-3xl text-ink">Fechar conta</h2>
+              <p className="text-sm text-muted">
+                Pedido {order.id} · comanda {order.numero_comanda || "sem número"} · {order.numero_mesa || "Balcão"}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+            className="rounded-full p-2 text-soft hover:bg-raised hover:text-ink transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 flex items-center space-x-2.5 text-xs text-red-400">
+          <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 p-3.5 flex items-center space-x-2.5 text-xs text-danger">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {successData ? (
-          <div className="py-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 ring-8 ring-emerald-500/10">
-              <CheckCircle2 className="h-9 w-9" />
-            </div>
+          <div className="py-6 text-center space-y-4   duration-200">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-success" aria-hidden />
             <div>
-              <h3 className="text-xl font-black text-zinc-100">
-                Pagamento Registrado!
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                O pedido foi finalizado e a receita adicionada ao fluxo de caixa.
-              </p>
+              <h3 className="text-4xl text-ink">Pagamento registrado</h3>
+              <p className="mt-1 text-sm text-muted">O pedido foi finalizado e a receita entrou no caixa.</p>
             </div>
 
-            <div className="rounded-2xl bg-zinc-950/80 border border-zinc-800/80 p-4 text-left space-y-2 text-xs">
-              <div className="flex justify-between text-zinc-400">
+            <div className="space-y-2 border-y border-dashed border-line-strong py-4 text-left text-base">
+              <div className="flex justify-between text-soft">
                 <span>Total Pago:</span>
-                <span className="font-bold text-zinc-200">
+                <span className="font-bold text-ink">
                   {new Intl.NumberFormat("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   }).format(orderTotal)}
                 </span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-soft">
                 <span>Forma de Pagamento:</span>
-                <span className="font-semibold capitalize text-yellow-400">
+                <span className="font-semibold capitalize text-accent">
                   {successData.payment_method?.replace("_", " ")}
                 </span>
               </div>
               {successData.payment_method === "dinheiro" && (
                 <>
-                  <div className="flex justify-between text-zinc-400">
+                  <div className="flex justify-between text-soft">
                     <span>Valor Recebido:</span>
-                    <span className="text-zinc-200">
+                    <span className="text-ink">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
                       }).format(Number(successData.valor_recebido || 0))}
                     </span>
                   </div>
-                  <div className="flex justify-between text-emerald-400 font-bold border-t border-zinc-800/80 pt-2">
+                  <div className="flex justify-between text-success font-bold border-t border-line/80 pt-2">
                     <span>Troco Entregue:</span>
                     <span>
                       {new Intl.NumberFormat("pt-BR", {
@@ -180,7 +167,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
 
             <button
               onClick={() => setShowReceipt(true)}
-              className="w-full h-11 rounded-2xl border border-yellow-400/60 bg-yellow-400/10 text-yellow-400 font-bold text-sm hover:bg-yellow-400 hover:text-zinc-950 transition-colors flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-lg border border-line-strong text-ink font-semibold text-base hover:bg-raised flex items-center justify-center gap-2"
             >
               <Printer className="h-4 w-4" />
               Imprimir Cupom do Cliente
@@ -188,7 +175,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
 
             <button
               onClick={onClose}
-              className="w-full h-11 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-sm hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/20"
+              className="w-full h-12 rounded-lg bg-accent text-accent-ink font-bold text-base hover:bg-accent-hover"
             >
               Concluir e Fechar
             </button>
@@ -196,11 +183,9 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
         ) : (
           <div className="space-y-5">
             {/* Total Display */}
-            <div className="flex items-center justify-between rounded-2xl bg-zinc-950 border border-zinc-800/80 p-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Total da Conta
-              </span>
-              <span className="text-2xl font-black text-yellow-400">
+            <div className="flex items-baseline justify-between border-b-2 border-ink pb-2">
+              <span className="text-lg font-bold text-ink">Total da conta</span>
+              <span className="font-display text-5xl text-ink">
                 {new Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
@@ -210,17 +195,17 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
 
             {/* Payment Method Selector */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
+              <label className="mb-2 block text-sm font-semibold text-ink">
                 Método de Pagamento
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("dinheiro")}
-                  className={`flex items-center justify-center p-3 rounded-2xl text-xs font-bold border transition-all ${
+                  className={`flex items-center justify-center p-3 rounded-lg text-xs font-bold border transition-colors ${
                     paymentMethod === "dinheiro"
-                      ? "bg-yellow-400 text-zinc-950 border-yellow-400 shadow-md shadow-yellow-400/20"
-                      : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800/50"
+                      ? "bg-accent text-accent-ink border-accent "
+                      : "bg-canvas border-line text-soft hover:bg-raised/50"
                   }`}
                 >
                   <Banknote className="mr-2 h-4 w-4" /> Dinheiro
@@ -229,10 +214,10 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("pix")}
-                  className={`flex items-center justify-center p-3 rounded-2xl text-xs font-bold border transition-all ${
+                  className={`flex items-center justify-center p-3 rounded-lg text-xs font-bold border transition-colors ${
                     paymentMethod === "pix"
-                      ? "bg-yellow-400 text-zinc-950 border-yellow-400 shadow-md shadow-yellow-400/20"
-                      : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800/50"
+                      ? "bg-accent text-accent-ink border-accent "
+                      : "bg-canvas border-line text-soft hover:bg-raised/50"
                   }`}
                 >
                   <QrCode className="mr-2 h-4 w-4" /> Pix
@@ -241,10 +226,10 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("cartao_debito")}
-                  className={`flex items-center justify-center p-3 rounded-2xl text-xs font-bold border transition-all ${
+                  className={`flex items-center justify-center p-3 rounded-lg text-xs font-bold border transition-colors ${
                     paymentMethod === "cartao_debito"
-                      ? "bg-yellow-400 text-zinc-950 border-yellow-400 shadow-md shadow-yellow-400/20"
-                      : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800/50"
+                      ? "bg-accent text-accent-ink border-accent "
+                      : "bg-canvas border-line text-soft hover:bg-raised/50"
                   }`}
                 >
                   <CreditCard className="mr-2 h-4 w-4" /> Cartão Débito
@@ -253,10 +238,10 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("cartao_credito")}
-                  className={`flex items-center justify-center p-3 rounded-2xl text-xs font-bold border transition-all ${
+                  className={`flex items-center justify-center p-3 rounded-lg text-xs font-bold border transition-colors ${
                     paymentMethod === "cartao_credito"
-                      ? "bg-yellow-400 text-zinc-950 border-yellow-400 shadow-md shadow-yellow-400/20"
-                      : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800/50"
+                      ? "bg-accent text-accent-ink border-accent "
+                      : "bg-canvas border-line text-soft hover:bg-raised/50"
                   }`}
                 >
                   <CreditCard className="mr-2 h-4 w-4" /> Cartão Crédito
@@ -266,10 +251,10 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
 
             {/* Dinheiro specifics: Valor Recebido & Troco */}
             {paymentMethod === "dinheiro" && (
-              <div className="rounded-2xl bg-zinc-950/70 border border-zinc-800/80 p-4 space-y-3 animate-in fade-in duration-200">
+              <div className="rounded-lg bg-canvas/70 border border-line/80 p-4 space-y-3   duration-200">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                    <Calculator className="h-4 w-4 text-yellow-400" />
+                  <label className="text-xs font-semibold text-soft flex items-center gap-1.5">
+                    <Calculator className="h-4 w-4 text-accent" />
                     Valor Recebido em Dinheiro (R$)
                   </label>
                 </div>
@@ -280,7 +265,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                   min="0"
                   value={valorRecebido}
                   onChange={(e) => setValorRecebido(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-zinc-900 border border-zinc-800 px-3.5 text-base font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-yellow-400"
+                  className="w-full h-11 rounded-xl bg-surface border border-line px-3.5 text-base font-bold text-ink placeholder:text-faint focus:outline-none focus:border-accent"
                   placeholder="0,00"
                 />
 
@@ -289,15 +274,15 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                   <button
                     type="button"
                     onClick={() => handlePreset(orderTotal)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-raised/80 text-xs font-semibold text-soft hover:bg-line-strong transition-colors"
                   >
-                    Exato (R$ {orderTotal.toFixed(2)})
+                    Exato ({brl(orderTotal)})
                   </button>
                   {orderTotal <= 20 && (
                     <button
                       type="button"
                       onClick={() => handlePreset(20)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-raised/80 text-xs font-semibold text-soft hover:bg-line-strong transition-colors"
                     >
                       R$ 20,00
                     </button>
@@ -306,7 +291,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                     <button
                       type="button"
                       onClick={() => handlePreset(50)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-raised/80 text-xs font-semibold text-soft hover:bg-line-strong transition-colors"
                     >
                       R$ 50,00
                     </button>
@@ -315,7 +300,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                     <button
                       type="button"
                       onClick={() => handlePreset(100)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-raised/80 text-xs font-semibold text-soft hover:bg-line-strong transition-colors"
                     >
                       R$ 100,00
                     </button>
@@ -323,17 +308,17 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 </div>
 
                 {/* Troco Result */}
-                <div className="flex items-center justify-between rounded-xl bg-zinc-900 border border-zinc-800/80 p-3 mt-2">
-                  <span className="text-xs font-semibold text-zinc-400">
+                <div className="flex items-center justify-between rounded-xl bg-surface border border-line/80 p-3 mt-2">
+                  <span className="text-xs font-semibold text-soft">
                     Troco a Devolver:
                   </span>
                   <span
                     className={`text-base font-black ${
                       valorInsuficiente
-                        ? "text-red-400"
+                        ? "text-danger"
                         : troco > 0
-                        ? "text-emerald-400"
-                        : "text-zinc-400"
+                        ? "text-success"
+                        : "text-soft"
                     }`}
                   >
                     {valorInsuficiente
@@ -353,7 +338,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 h-12 rounded-2xl border border-zinc-800 bg-zinc-950 font-bold text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+                className="flex-1 h-12 rounded-lg border border-line bg-canvas font-bold text-xs text-soft hover:bg-raised hover:text-ink transition-colors"
               >
                 Cancelar
               </button>
@@ -361,7 +346,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 type="button"
                 onClick={handleConfirmPayment}
                 disabled={loading || valorInsuficiente}
-                className="flex-[2] h-12 rounded-2xl bg-yellow-400 text-zinc-950 font-black text-xs hover:bg-yellow-300 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-lg shadow-yellow-400/20 disabled:opacity-40"
+                className="flex-[2] h-12 rounded-lg bg-accent text-accent-ink font-black text-xs hover:bg-accent-hover active:scale-[0.98] transition-[transform,background-color,border-color,color,opacity] flex items-center justify-center space-x-2  disabled:opacity-40"
               >
                 {loading ? (
                   <>
@@ -371,7 +356,7 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    <span>Confirmar Pagamento</span>
+                    <span>Confirmar pagamento</span>
                   </>
                 )}
               </button>
@@ -386,6 +371,6 @@ export function PaymentModal({ order, onClose, onSuccess }: PaymentModalProps) {
           onClose={() => setShowReceipt(false)}
         />
       )}
-    </div>
+    </Dialog>
   )
 }

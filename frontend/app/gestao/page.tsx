@@ -1,9 +1,14 @@
 "use client"
 
 import { notify, askConfirm } from "@/components/ui/feedback";
+import { brl } from "@/lib/format"
+import { buttonClass } from "@/components/ui/button"
+import { apiErrorMessage } from "@/lib/errors"
+import { Dialog } from "@/components/ui/dialog"
 import React, { useState } from "react"
 import useSWR, { mutate } from "swr"
 import { api, fetcher } from "@/services/api"
+import { PageHeader, StatusTag, StatStrip, TabBar } from "@/components/ui/blocks"
 import {
   Search,
   RefreshCw,
@@ -180,7 +185,7 @@ export default function GestaoBalcaoPage() {
       setReturnSupplies(false)
       showFeedback("Pedido cancelado com sucesso.")
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao cancelar pedido.")
+      notify(apiErrorMessage(err, "Erro ao cancelar pedido."))
     } finally {
       setLoadingAction(false)
     }
@@ -193,7 +198,7 @@ export default function GestaoBalcaoPage() {
       mutate("/orders/")
       showFeedback(`Pedido #${orderId} liberado: atribua um novo entregador.`)
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao reenviar pedido para entrega.")
+      notify(apiErrorMessage(err, "Erro ao reenviar pedido para entrega."))
     } finally {
       setLoadingAction(false)
     }
@@ -211,7 +216,7 @@ export default function GestaoBalcaoPage() {
       mutate("/orders/")
       showFeedback("Item adicionado ao pedido!")
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao adicionar item.")
+      notify(apiErrorMessage(err, "Erro ao adicionar item."))
     } finally {
       setLoadingAction(false)
     }
@@ -228,7 +233,7 @@ export default function GestaoBalcaoPage() {
       mutate("/orders/")
       showFeedback("Item removido do pedido.")
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao remover item.")
+      notify(apiErrorMessage(err, "Erro ao remover item."))
     } finally {
       setLoadingAction(false)
     }
@@ -242,7 +247,7 @@ export default function GestaoBalcaoPage() {
       setIsCloseShiftOpen(false)
       showFeedback(res.data.message || "Expediente encerrado e pedidos arquivados.")
     } catch (err: any) {
-      notify(err.response?.data?.detail || "Erro ao encerrar expediente.")
+      notify(apiErrorMessage(err, "Erro ao encerrar expediente."))
     } finally {
       setLoadingAction(false)
     }
@@ -254,75 +259,30 @@ export default function GestaoBalcaoPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "criado":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            Aberto
-          </span>
-        )
-      case "confirmado":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            Confirmado
-          </span>
-        )
-      case "em_preparo":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center gap-1 w-fit">
-            <Flame className="h-3 w-3" /> Em Preparo
-          </span>
-        )
-      case "pronto":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 w-fit animate-pulse">
-            <CheckCircle2 className="h-3 w-3" /> Pronto p/ Entrega
-          </span>
-        )
-      case "entregue":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Entregue
-          </span>
-        )
-      case "finalizado":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
-            Pago / Finalizado
-          </span>
-        )
-      case "cancelado":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
-            Cancelado
-          </span>
-        )
-      case "retornando_base":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/40 flex items-center gap-1 w-fit animate-pulse">
-            <AlertTriangle className="h-3 w-3" /> Retornando à Base
-          </span>
-        )
-      case "arquivado":
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-zinc-800 text-zinc-400">
-            Arquivado
-          </span>
-        )
-      default:
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-zinc-800 text-zinc-400">
-            {status}
-          </span>
-        )
+    const map: Record<string, { tone: "neutral" | "info" | "warn" | "accent" | "success" | "danger"; label: string; pulse?: boolean }> = {
+      criado: { tone: "info", label: "Aberto" },
+      confirmado: { tone: "warn", label: "Confirmado" },
+      em_preparo: { tone: "accent", label: "Em preparo" },
+      pronto: { tone: "success", label: "Pronto para entrega" },
+      entregue: { tone: "success", label: "Entregue" },
+      finalizado: { tone: "neutral", label: "Pago" },
+      cancelado: { tone: "danger", label: "Cancelado" },
+      retornando_base: { tone: "danger", label: "Retornando à base", pulse: true },
+      arquivado: { tone: "neutral", label: "Arquivado" },
     }
+    const m = map[status] ?? { tone: "neutral" as const, label: status }
+    return (
+      <StatusTag tone={m.tone} pulse={m.pulse}>
+        {m.label}
+      </StatusTag>
+    )
   }
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 p-6 space-y-6 overflow-y-auto">
+    <div className="flex flex-col h-full bg-canvas text-ink p-6 space-y-6 overflow-y-auto">
       {/* Toast Feedback */}
       {actionSuccessMessage && (
-        <div className="fixed top-6 right-6 z-50 rounded-2xl bg-emerald-500 text-zinc-950 font-bold px-4 py-3 shadow-2xl flex items-center gap-2 animate-in slide-in-from-top duration-300">
+        <div className="fixed top-6 right-6 z-50 rounded-2xl bg-success text-accent-ink font-bold px-4 py-3 shadow-2xl flex items-center gap-2   duration-300">
           <CheckCircle2 className="h-5 w-5" />
           <span>{actionSuccessMessage}</span>
         </div>
@@ -330,26 +290,26 @@ export default function GestaoBalcaoPage() {
 
       {/* Alerta Visual de Falha de Entrega (Issue #82) */}
       {allOrders.filter((o) => o.status === "retornando_base").length > 0 && (
-        <div className="rounded-2xl border-2 border-red-500/60 bg-red-950/40 p-4 shadow-xl shadow-red-950/50 animate-pulse">
+        <div className="rounded-lg border border-danger/50 bg-danger/10 p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-6 w-6 text-red-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-6 w-6 text-danger shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="text-sm font-extrabold text-red-200">
+              <h3 className="text-sm font-extrabold text-danger">
                 Atenção: {allOrders.filter((o) => o.status === "retornando_base").length} pedido(s) retornando à base por falha na entrega!
               </h3>
               <div className="mt-2 space-y-1.5">
                 {allOrders.filter((o) => o.status === "retornando_base").map((ped) => (
-                  <div key={ped.id} className="flex flex-wrap items-center justify-between text-xs text-red-300 bg-red-900/30 rounded-xl px-3 py-2 border border-red-500/30">
+                  <div key={ped.id} className="flex flex-wrap items-center justify-between text-xs text-danger bg-danger/30 rounded-xl px-3 py-2 border border-danger/30">
                     <div>
                       <strong>Pedido #{ped.id}</strong> ({ped.endereco?.logradouro}, {ped.endereco?.numero}) — Motivo: <span className="font-semibold text-white">{ped.motivo_falha_entrega || "Não informado"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-red-400">Entregador: {ped.entregador_nome || `#${ped.entregador}`}</span>
+                      <span className="text-xs text-danger">Entregador: {ped.entregador_nome || `#${ped.entregador}`}</span>
                       <button
                         type="button"
                         onClick={() => handleResendDelivery(ped.id)}
                         disabled={loadingAction}
-                        className="rounded-lg border border-yellow-400/60 bg-yellow-400/10 px-2 py-1 text-xs font-bold text-yellow-300 hover:bg-yellow-400 hover:text-zinc-950 disabled:opacity-50"
+                        className="rounded-lg border border-accent/60 bg-accent/10 px-2 py-1 text-xs font-bold text-accent hover:bg-accent hover:text-accent-ink disabled:opacity-50"
                       >
                         Reenviar entrega
                       </button>
@@ -363,198 +323,104 @@ export default function GestaoBalcaoPage() {
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-zinc-50 flex items-center gap-2.5">
-            <Receipt className="h-7 w-7 text-yellow-400" />
-            Gestão de Pedidos do Balcão
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Painel desktop central para acompanhamento, controle de comandas e fechamento de contas.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => mutate("/orders/")}
-            disabled={isValidating}
-            className="flex items-center gap-2 px-4 h-11 rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 text-xs font-bold transition-colors"
-          >
-            <RefreshCw className={`h-4 w-4 ${isValidating ? "animate-spin text-yellow-400" : ""}`} />
-            <span>Atualizar</span>
-          </button>
-
-          <Can do="FECHAR_CAIXA">
+      <PageHeader
+        title="Pedidos do balcão"
+        description="Acompanhe as comandas, receba os pagamentos e feche o expediente."
+        actions={
+          <>
             <button
-              onClick={() => setIsCloseShiftOpen(true)}
-              className="flex items-center gap-2 px-5 h-11 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white text-xs font-black transition-all shadow-md active:scale-95"
+              type="button"
+              onClick={() => mutate("/orders/")}
+              disabled={isValidating}
+              className={buttonClass("outline")}
             >
-              <Archive className="h-4 w-4" />
-              <span>Encerrar Expediente</span>
+              <RefreshCw className={`h-4 w-4 ${isValidating ? "animate-spin text-accent" : ""}`} />
+              Atualizar
             </button>
-          </Can>
-        </div>
-      </div>
+            <Can do="FECHAR_CAIXA">
+              <button
+                type="button"
+                onClick={() => setIsCloseShiftOpen(true)}
+                className={buttonClass("danger")}
+              >
+                <Archive className="h-4 w-4" />
+                Encerrar expediente
+              </button>
+            </Can>
+          </>
+        }
+      />
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-5 shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Pedidos Ativos
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-yellow-400/10 text-yellow-400">
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-zinc-50 mt-2">{activeOrdersCount}</p>
-          <span className="text-xs text-zinc-400">Mesas e balcões abertos</span>
-        </div>
+      <StatStrip
+        items={[
+          { label: "Pedidos ativos", value: activeOrdersCount, hint: "Mesas e balcões abertos" },
+          { label: "Na cozinha", value: inPrepCount, hint: "Em preparação agora", tone: "warn" },
+          { label: "Prontos", value: readyCount, hint: "Aguardando entrega ou retirada", tone: "success" },
+          {
+            label: "Faturamento do turno",
+            value: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(todayRevenue),
+            hint: "Pedidos pagos e entregues",
+            tone: "accent",
+          },
+        ]}
+      />
 
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-5 shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Na Cozinha
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-400/10 text-amber-400">
-              <Flame className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-amber-400 mt-2">{inPrepCount}</p>
-          <span className="text-xs text-zinc-400">Em preparação agora</span>
-        </div>
-
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-5 shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Prontos
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-emerald-400 mt-2">{readyCount}</p>
-          <span className="text-xs text-zinc-400">Aguardando entrega</span>
-        </div>
-
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-5 shadow-lg relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Faturamento do Turno
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-purple-400/10 text-purple-400">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-purple-400 mt-2">
-            {new Intl.NumberFormat("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }).format(todayRevenue)}
-          </p>
-          <span className="text-xs text-zinc-400">Receita de pedidos finalizados</span>
-        </div>
-      </div>
-
-      {/* Control Bar: Search & Tabs */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Search */}
+      <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-end">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" aria-hidden />
           <input
             type="text"
-            placeholder="Buscar por Mesa ou Comanda..."
+            placeholder="Buscar por mesa ou comanda"
+            aria-label="Buscar por mesa ou comanda"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-yellow-400"
+            className="h-10 w-full rounded-lg border border-line-strong bg-canvas pl-10 pr-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
         </div>
-
-        {/* Status Tabs */}
-        <div className="flex items-center p-1 rounded-2xl bg-zinc-900 border border-zinc-800 overflow-x-auto max-w-full">
-          <button
-            onClick={() => setFilterTab("ativos")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
-              filterTab === "ativos"
-                ? "bg-yellow-400 text-zinc-950 shadow"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Ativos ({activeOrdersCount})
-          </button>
-          <button
-            onClick={() => setFilterTab("abertos")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
-              filterTab === "abertos"
-                ? "bg-yellow-400 text-zinc-950 shadow"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Em Aberto ({inPrepCount})
-          </button>
-          <button
-            onClick={() => setFilterTab("prontos")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
-              filterTab === "prontos"
-                ? "bg-yellow-400 text-zinc-950 shadow"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Prontos ({readyCount})
-          </button>
-          <button
-            onClick={() => setFilterTab("finalizados")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
-              filterTab === "finalizados"
-                ? "bg-yellow-400 text-zinc-950 shadow"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Finalizados
-          </button>
-          <button
-            onClick={() => setFilterTab("todos")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
-              filterTab === "todos"
-                ? "bg-yellow-400 text-zinc-950 shadow"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            Todos ({allOrders.length})
-          </button>
-        </div>
+        <TabBar
+          label="Filtrar pedidos"
+          value={filterTab}
+          onChange={setFilterTab}
+          tabs={[
+            { value: "ativos", label: "Ativos", count: activeOrdersCount },
+            { value: "abertos", label: "Em aberto", count: inPrepCount },
+            { value: "prontos", label: "Prontos", count: readyCount },
+            { value: "finalizados", label: "Finalizados" },
+            { value: "todos", label: "Todos", count: allOrders.length },
+          ]}
+        />
       </div>
 
       {/* Orders Desktop Table */}
-      <div className="rounded-3xl bg-zinc-900 border border-zinc-800 shadow-xl overflow-hidden flex-1">
+      <div className="flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-12 space-y-3 text-zinc-500">
-            <RefreshCw className="h-8 w-8 animate-spin text-yellow-400" />
+          <div className="flex flex-col items-center justify-center p-12 space-y-3 text-muted">
+            <RefreshCw className="h-8 w-8 animate-spin text-accent" />
             <p className="text-sm font-semibold">Carregando pedidos...</p>
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-16 text-center space-y-3 text-zinc-500">
-            <Receipt className="h-12 w-12 text-zinc-700" />
-            <p className="text-base font-bold text-zinc-300">Nenhum pedido encontrado</p>
-            <p className="text-xs text-zinc-500 max-w-sm">
+          <div className="flex flex-col items-center justify-center p-16 text-center space-y-3 text-muted">
+            <Receipt className="h-12 w-12 text-faint" />
+            <p className="text-base font-bold text-soft">Nenhum pedido encontrado</p>
+            <p className="text-xs text-muted max-w-sm">
               Não há pedidos correspondentes ao filtro selecionado. Novos pedidos abertos no PDV aparecerão aqui em tempo real.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-950/70 border-b border-zinc-800 text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b-2 border-ink text-sm font-bold text-ink">
                 <tr>
-                  <th className="py-4 px-5">Comanda / Mesa</th>
-                  <th className="py-4 px-4">Tipo</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-4">Itens</th>
-                  <th className="py-4 px-4">Total</th>
-                  <th className="py-4 px-4">Pagamento</th>
-                  <th className="py-4 px-5 text-right">Ações</th>
+                  <th className="py-3 px-3">Comanda</th>
+                  <th className="py-3 px-3">Tipo</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3">Itens</th>
+                  <th className="py-3 px-3">Total</th>
+                  <th className="py-3 px-3">Pagamento</th>
+                  <th className="py-3 px-3 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60">
+              <tbody className="divide-y divide-line/60">
                 {filteredOrders.map((order) => {
                   const canPay = !["finalizado", "arquivado", "cancelado"].includes(order.status)
                   const canEdit = !["finalizado", "arquivado", "cancelado"].includes(order.status)
@@ -563,42 +429,35 @@ export default function GestaoBalcaoPage() {
                   return (
                     <tr
                       key={order.id}
-                      className="hover:bg-zinc-800/30 transition-colors group"
+                      className="hover:bg-raised/30 transition-colors group"
                     >
                       {/* Comanda & Mesa */}
-                      <td className="py-4 px-5">
+                      <td className="py-3 px-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 font-black text-sm">
-                            #{order.numero_comanda || order.id}
-                          </div>
-                          <div>
-                            <span className="font-bold text-zinc-100 text-sm block">
-                              {order.numero_mesa || "Balcão"}
-                            </span>
-                            <span className="text-xs text-zinc-500 font-mono">
-                              ID #{order.id}
-                            </span>
-                          </div>
+                          <span className="font-display w-14 text-4xl text-ink">{order.numero_comanda || order.id}</span>
+                          <span className="text-xs text-muted">Pedido {order.id}</span>
                         </div>
                       </td>
 
                       {/* Tipo */}
-                      <td className="py-4 px-4">
-                        <span className="capitalize font-semibold text-zinc-300">
-                          {order.tipo_atendimento}
+                      <td className="py-3 px-3">
+                        <span className="font-semibold text-ink">
+                          {order.tipo_atendimento === "mesa"
+                            ? `Mesa ${order.numero_mesa}`.trim()
+                            : ({ balcao: "Balcão", delivery: "Delivery", retirada: "Retirada" } as Record<string, string>)[order.tipo_atendimento] ?? order.tipo_atendimento}
                         </span>
                         {order.tipo_atendimento === "delivery" && order.endereco && (
                           <div className="flex flex-col gap-0.5 mt-1">
-                            <div className="flex items-center gap-1 text-xs text-amber-400" title={`${order.endereco.logradouro}, ${order.endereco.numero}`}>
+                            <div className="flex items-center gap-1 text-xs text-warn" title={`${order.endereco.logradouro}, ${order.endereco.numero}`}>
                               <MapPin className="h-3 w-3 shrink-0" />
                               <span className="truncate max-w-[120px]">{order.endereco.bairro}</span>
                             </div>
                             {order.entregador_nome ? (
-                              <span className="text-xs text-emerald-400 font-semibold">Moto: {order.entregador_nome}</span>
+                              <span className="text-xs text-success font-semibold">Moto: {order.entregador_nome}</span>
                             ) : ["confirmado", "em_preparo", "pronto", "retornando_base"].includes(order.status) ? (
                               <button
                                 onClick={() => setSelectedOrderForAssign(order)}
-                                className="text-xs font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 rounded px-1.5 py-0.5 hover:bg-yellow-400 hover:text-zinc-950 w-fit transition-colors"
+                                className="w-fit rounded border border-accent px-1.5 py-0.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-ink"
                               >
                                 + Atribuir Moto
                               </button>
@@ -608,20 +467,20 @@ export default function GestaoBalcaoPage() {
                       </td>
 
                       {/* Status */}
-                      <td className="py-4 px-4">{getStatusBadge(order.status)}</td>
+                      <td className="py-3 px-3">{getStatusBadge(order.status)}</td>
 
                       {/* Itens */}
-                      <td className="py-4 px-4">
-                        <span className="font-bold text-zinc-200">
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-ink">
                           {order.itens?.length || 0} item(ns)
                         </span>
-                        <p className="text-xs text-zinc-500 truncate max-w-[180px]">
+                        <p className="text-xs text-muted truncate max-w-[120px]">
                           {order.itens?.map((i) => `${i.quantidade}x ${i.produto_nome || i.produto}`).join(", ")}
                         </p>
                       </td>
 
                       {/* Total */}
-                      <td className="py-4 px-4 font-black text-yellow-400 text-sm">
+                      <td className="font-display py-3 px-3 text-2xl text-ink">
                         {new Intl.NumberFormat("pt-BR", {
                           style: "currency",
                           currency: "BRL",
@@ -629,25 +488,25 @@ export default function GestaoBalcaoPage() {
                       </td>
 
                       {/* Pagamento */}
-                      <td className="py-4 px-4">
-                        <span className="capitalize font-medium text-zinc-300 block">
+                      <td className="py-3 px-3">
+                        <span className="capitalize font-medium text-soft block">
                           {order.payment_method?.replace("_", " ")}
                         </span>
                         {order.status === "finalizado" && order.troco && Number(order.troco) > 0 && (
-                          <span className="text-xs text-emerald-400 font-bold">
-                            Troco: R$ {Number(order.troco).toFixed(2)}
+                          <span className="text-xs text-success font-bold">
+                            Troco: {brl(order.troco)}
                           </span>
                         )}
                       </td>
 
                       {/* Ações */}
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           {/* Ver Detalhes */}
                           <button
                             onClick={() => setSelectedOrderForDetails(order)}
                             title="Ver Detalhes"
-                            className="p-2 rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+                            className="rounded-lg border border-line p-1.5 text-soft hover:bg-raised hover:text-ink"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -656,7 +515,7 @@ export default function GestaoBalcaoPage() {
                           <button
                             onClick={() => setSelectedOrderForPrint(order)}
                             title="Imprimir Cupom"
-                            className="p-2 rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-yellow-400 hover:bg-zinc-800 transition-colors"
+                            className="rounded-lg border border-line p-1.5 text-soft hover:bg-raised hover:text-ink"
                           >
                             <Printer className="h-4 w-4" />
                           </button>
@@ -666,7 +525,7 @@ export default function GestaoBalcaoPage() {
                             <button
                               onClick={() => setSelectedOrderForEdit(order)}
                               title="Adicionar / Remover Itens"
-                              className="p-2 rounded-xl border border-zinc-800 bg-zinc-950 text-amber-400 hover:text-amber-300 hover:bg-zinc-800 transition-colors"
+                              className="rounded-lg border border-line p-1.5 text-soft hover:bg-raised hover:text-ink"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
@@ -678,7 +537,7 @@ export default function GestaoBalcaoPage() {
                               <button
                                 onClick={() => setSelectedOrderForCancel(order)}
                                 title="Cancelar Pedido"
-                                className="p-2 rounded-xl border border-zinc-800 bg-zinc-950 text-red-400 hover:text-red-300 hover:bg-zinc-800 transition-colors"
+                                className="rounded-lg border border-line p-1.5 text-danger hover:bg-danger/10"
                               >
                                 <XCircle className="h-4 w-4" />
                               </button>
@@ -689,7 +548,7 @@ export default function GestaoBalcaoPage() {
                           {canPay && (
                             <button
                               onClick={() => setSelectedOrderForPayment(order)}
-                              className="flex items-center gap-1 px-3 py-2 rounded-xl bg-yellow-400 text-zinc-950 font-extrabold text-xs hover:bg-yellow-300 active:scale-95 transition-all shadow-md shadow-yellow-400/20"
+                              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-bold text-accent-ink hover:bg-accent-hover"
                             >
                               <Banknote className="h-3.5 w-3.5" />
                               <span>Cobrar</span>
@@ -720,20 +579,20 @@ export default function GestaoBalcaoPage() {
 
       {/* Details Modal */}
       {selectedOrderForDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4 mb-4">
+        <Dialog label={`Detalhes do pedido ${selectedOrderForDetails.id}`} onClose={() => setSelectedOrderForDetails(null)}>
+          <div className="w-full max-w-lg rounded-3xl bg-surface border border-line p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
               <div>
-                <h3 className="text-lg font-bold text-zinc-100">
+                <h3 className="text-3xl text-ink">
                   Detalhes do Pedido #{selectedOrderForDetails.id}
                 </h3>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-soft">
                   Comanda #{selectedOrderForDetails.numero_comanda || "S/N"} • {selectedOrderForDetails.numero_mesa}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOrderForDetails(null)}
-                className="p-2 text-zinc-400 hover:text-zinc-200 rounded-full hover:bg-zinc-800"
+                className="p-2 text-soft hover:text-ink rounded-full hover:bg-raised"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -741,12 +600,12 @@ export default function GestaoBalcaoPage() {
 
             {/* Delivery address if exists */}
             {selectedOrderForDetails.endereco && (
-              <div className="mb-4 p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300">
-                <span className="font-bold text-yellow-400 block mb-1 flex items-center gap-1">
+              <div className="mb-4 p-3 rounded-2xl bg-canvas border border-line text-xs text-soft">
+                <span className="font-bold text-accent block mb-1 flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" /> Endereço de Entrega (Delivery):
                 </span>
                 <p>{selectedOrderForDetails.endereco.logradouro}, {selectedOrderForDetails.endereco.numero} {selectedOrderForDetails.endereco.complemento ? `- ${selectedOrderForDetails.endereco.complemento}` : ""}</p>
-                <p className="text-zinc-400">{selectedOrderForDetails.endereco.bairro} • {selectedOrderForDetails.endereco.cidade}/{selectedOrderForDetails.endereco.uf} (CEP: {selectedOrderForDetails.endereco.cep})</p>
+                <p className="text-soft">{selectedOrderForDetails.endereco.bairro} • {selectedOrderForDetails.endereco.cidade}/{selectedOrderForDetails.endereco.uf} (CEP: {selectedOrderForDetails.endereco.cep})</p>
               </div>
             )}
 
@@ -755,49 +614,49 @@ export default function GestaoBalcaoPage() {
               {selectedOrderForDetails.itens?.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-canvas/60 border border-line text-xs"
                 >
-                  <span className="font-bold text-zinc-200">
+                  <span className="font-bold text-ink">
                     {item.quantidade}x {item.produto_nome || `Item #${item.produto}`}
                   </span>
-                  <span className="font-black text-yellow-400">
-                    R$ {Number(item.subtotal || 0).toFixed(2)}
+                  <span className="font-black text-accent">
+                    {brl(item.subtotal || 0)}
                   </span>
                 </div>
               ))}
             </div>
 
             {/* Financial Summary */}
-            <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs space-y-1.5">
-              <div className="flex justify-between text-zinc-400">
+            <div className="p-3.5 rounded-2xl bg-canvas border border-line text-xs space-y-1.5">
+              <div className="flex justify-between text-soft">
                 <span>Status:</span>
                 <span>{getStatusBadge(selectedOrderForDetails.status)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-soft">
                 <span>Forma de Pagamento:</span>
-                <span className="capitalize font-semibold text-zinc-200">{selectedOrderForDetails.payment_method?.replace("_", " ")}</span>
+                <span className="capitalize font-semibold text-ink">{selectedOrderForDetails.payment_method?.replace("_", " ")}</span>
               </div>
               {selectedOrderForDetails.valor_recebido && Number(selectedOrderForDetails.valor_recebido) > 0 && (
-                <div className="flex justify-between text-zinc-400">
+                <div className="flex justify-between text-soft">
                   <span>Valor Recebido:</span>
-                  <span className="text-zinc-200">R$ {Number(selectedOrderForDetails.valor_recebido).toFixed(2)}</span>
+                  <span className="text-ink">{brl(selectedOrderForDetails.valor_recebido)}</span>
                 </div>
               )}
               {selectedOrderForDetails.troco && Number(selectedOrderForDetails.troco) > 0 && (
-                <div className="flex justify-between text-emerald-400 font-bold">
+                <div className="flex justify-between text-success font-bold">
                   <span>Troco:</span>
-                  <span>R$ {Number(selectedOrderForDetails.troco).toFixed(2)}</span>
+                  <span>{brl(selectedOrderForDetails.troco)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-black text-yellow-400 pt-2 border-t border-zinc-800">
+              <div className="flex justify-between text-sm font-black text-accent pt-2 border-t border-line">
                 <span>Total:</span>
-                <span>R$ {Number(selectedOrderForDetails.total || 0).toFixed(2)}</span>
+                <span>{brl(selectedOrderForDetails.total || 0)}</span>
               </div>
             </div>
 
             <button
               onClick={() => setSelectedOrderForPrint(selectedOrderForDetails)}
-              className="w-full mt-4 h-11 rounded-2xl border border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400 hover:text-zinc-950 text-yellow-400 font-bold text-xs transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-4 h-11 rounded-2xl border border-accent/60 bg-accent/10 hover:bg-accent hover:text-accent-ink text-accent font-bold text-xs transition-colors flex items-center justify-center gap-2"
             >
               <Printer className="h-4 w-4" />
               Imprimir Cupom
@@ -805,12 +664,12 @@ export default function GestaoBalcaoPage() {
 
             <button
               onClick={() => setSelectedOrderForDetails(null)}
-              className="w-full mt-2 h-11 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition-colors"
+              className="w-full mt-2 h-11 rounded-2xl bg-raised hover:bg-line-strong text-ink font-bold text-xs transition-colors"
             >
               Fechar
             </button>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {selectedOrderForPrint && (
@@ -819,20 +678,20 @@ export default function GestaoBalcaoPage() {
 
       {/* Edit Items Modal */}
       {selectedOrderForEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-xl rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+        <Dialog label={`Editar itens do pedido ${selectedOrderForEdit.id}`} onClose={() => setSelectedOrderForEdit(null)}>
+          <div className="w-full max-w-xl rounded-3xl bg-surface border border-line p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
               <div>
-                <h3 className="text-lg font-bold text-zinc-100">
+                <h3 className="text-3xl text-ink">
                   Editar Itens do Pedido #{selectedOrderForEdit.id}
                 </h3>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-soft">
                   Comanda #{selectedOrderForEdit.numero_comanda || "S/N"} • {selectedOrderForEdit.numero_mesa}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOrderForEdit(null)}
-                className="p-2 text-zinc-400 hover:text-zinc-200 rounded-full hover:bg-zinc-800"
+                className="p-2 text-soft hover:text-ink rounded-full hover:bg-raised"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -840,27 +699,27 @@ export default function GestaoBalcaoPage() {
 
             {/* Current Items */}
             <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <span className="text-xs font-bold   text-soft block mb-1">
                 Itens Atuais no Pedido:
               </span>
               {selectedOrderForEdit.itens?.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-zinc-950 border border-zinc-800"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-canvas border border-line"
                 >
                   <div>
-                    <span className="text-xs font-bold text-zinc-200 block">
+                    <span className="text-xs font-bold text-ink block">
                       {item.quantidade}x {item.produto_nome || `Produto #${item.produto}`}
                     </span>
-                    <span className="text-xs text-zinc-400">
-                      R$ {Number(item.preco_unitario).toFixed(2)} un. • Subtotal: R$ {Number(item.subtotal).toFixed(2)}
+                    <span className="text-xs text-soft">
+                      {brl(item.preco_unitario)} un. • Subtotal: {brl(item.subtotal)}
                     </span>
                   </div>
                   <button
                     onClick={() => handleRemoveItemFromOrder(item.id)}
                     disabled={loadingAction}
                     title="Remover este item"
-                    className="p-2 rounded-xl text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                    className="p-2 rounded-xl text-danger hover:bg-danger/20 hover:text-danger transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -869,8 +728,8 @@ export default function GestaoBalcaoPage() {
             </div>
 
             {/* Add Products Quick List */}
-            <div className="border-t border-zinc-800 pt-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-yellow-400 block mb-2">
+            <div className="border-t border-line pt-3">
+              <span className="text-xs font-bold   text-accent block mb-2">
                 + Adicionar Produto ao Pedido:
               </span>
               <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1">
@@ -879,13 +738,13 @@ export default function GestaoBalcaoPage() {
                     key={prod.id}
                     onClick={() => handleAddItemToOrder(prod.id)}
                     disabled={loadingAction}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-yellow-400/50 hover:bg-zinc-800/40 text-left transition-all"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-canvas border border-line hover:border-accent/50 hover:bg-raised/40 text-left transition-colors"
                   >
                     <div className="min-w-0 pr-1">
-                      <p className="text-xs font-bold text-zinc-200 truncate">{prod.nome}</p>
-                      <p className="text-xs text-yellow-400 font-bold">R$ {Number(prod.preco).toFixed(2)}</p>
+                      <p className="text-xs font-bold text-ink truncate">{prod.nome}</p>
+                      <p className="text-xs text-accent font-bold">{brl(prod.preco)}</p>
                     </div>
-                    <Plus className="h-4 w-4 text-yellow-400 shrink-0" />
+                    <Plus className="h-4 w-4 text-accent shrink-0" />
                   </button>
                 ))}
               </div>
@@ -893,30 +752,30 @@ export default function GestaoBalcaoPage() {
 
             <button
               onClick={() => setSelectedOrderForEdit(null)}
-              className="w-full mt-4 h-11 rounded-2xl bg-yellow-400 text-zinc-950 font-bold text-xs hover:bg-yellow-300 transition-colors shadow-lg"
+              className="w-full mt-4 h-11 rounded-2xl bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-colors "
             >
               Concluir Edição
             </button>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {/* Cancel Confirmation Modal */}
       {selectedOrderForCancel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/20 text-red-400 ring-8 ring-red-500/10 mb-3">
+        <Dialog label={`Cancelar pedido ${selectedOrderForCancel.id}`} onClose={() => { setSelectedOrderForCancel(null); setReturnSupplies(false) }}>
+          <div className="w-full max-w-md rounded-3xl bg-surface border border-line p-6 shadow-2xl relative text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger/20 text-danger ring-8 ring-danger/10 mb-3">
               <AlertCircle className="h-8 w-8" />
             </div>
-            <h3 className="text-lg font-black text-zinc-100">
+            <h3 className="text-lg font-black text-ink">
               Cancelar Pedido #{selectedOrderForCancel.id}?
             </h3>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-soft mt-1">
               Esta ação cancelará a comanda #{selectedOrderForCancel.numero_comanda} ({selectedOrderForCancel.numero_mesa}).
             </p>
 
             <div className="mt-4 text-left">
-              <label htmlFor="f-appgestaopage-1" className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
+              <label htmlFor="f-appgestaopage-1" className="text-xs font-bold   text-soft mb-1 block">
                 Motivo do cancelamento:
               </label>
               <input id="f-appgestaopage-1"
@@ -924,17 +783,17 @@ export default function GestaoBalcaoPage() {
                 placeholder="Ex: Cliente desistiu, erro na digitação..."
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full h-10 px-3 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-red-500"
+                className="w-full h-10 px-3 text-xs rounded-xl bg-canvas border border-line text-ink placeholder:text-faint focus:outline-none focus:border-danger"
               />
             </div>
 
             {["em_preparo", "pronto", "entregue", "retornando_base"].includes(selectedOrderForCancel.status) && (
-              <label className="mt-3 flex items-start gap-2 text-left text-xs text-zinc-300 cursor-pointer">
+              <label className="mt-3 flex items-start gap-2 text-left text-xs text-soft cursor-pointer">
                 <input
                   type="checkbox"
                   checked={returnSupplies}
                   onChange={(e) => setReturnSupplies(e.target.checked)}
-                  className="mt-0.5 h-3.5 w-3.5 accent-yellow-400"
+                  className="mt-0.5 h-3.5 w-3.5 accent-accent"
                 />
                 <span>
                   Devolver insumos ao estoque (ingredientes não utilizados). Se desmarcado, o consumo é mantido como perda.
@@ -945,46 +804,46 @@ export default function GestaoBalcaoPage() {
             <div className="flex gap-2.5 mt-5">
               <button
                 onClick={() => { setSelectedOrderForCancel(null); setReturnSupplies(false) }}
-                className="flex-1 h-11 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition-colors"
+                className="flex-1 h-11 rounded-2xl bg-raised hover:bg-line-strong text-ink font-bold text-xs transition-colors"
               >
                 Voltar
               </button>
               <button
                 onClick={handleCancelOrder}
                 disabled={loadingAction}
-                className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black text-xs transition-colors shadow-lg shadow-red-500/20"
+                className="flex-1 h-11 rounded-2xl bg-danger hover:bg-danger text-white font-black text-xs transition-colors "
               >
-                {loadingAction ? "Cancelando..." : "Confirmar Cancelamento"}
+                {loadingAction ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {/* Close Shift Modal */}
       {isCloseShiftOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 ring-8 ring-amber-500/10 mb-3">
+        <Dialog label="Encerrar expediente" onClose={() => setIsCloseShiftOpen(false)}>
+          <div className="w-full max-w-md rounded-3xl bg-surface border border-line p-6 shadow-2xl relative text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warn/20 text-warn ring-8 ring-warn/10 mb-3">
               <Archive className="h-8 w-8" />
             </div>
-            <h3 className="text-lg font-black text-zinc-100">
+            <h3 className="text-lg font-black text-ink">
               Encerrar Expediente do Balcão?
             </h3>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-soft mt-1">
               Todos os pedidos finalizados e cancelados serão arquivados, limpando a tela para o próximo turno.
             </p>
 
-            <div className="p-3.5 my-4 rounded-2xl bg-zinc-950 border border-zinc-800 text-left text-xs space-y-1">
-              <div className="flex justify-between text-zinc-400">
+            <div className="p-3.5 my-4 rounded-2xl bg-canvas border border-line text-left text-xs space-y-1">
+              <div className="flex justify-between text-soft">
                 <span>Faturamento a ser fechado:</span>
-                <span className="font-bold text-yellow-400">
+                <span className="font-bold text-accent">
                   {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(todayRevenue)}
                 </span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-soft">
                 <span>Pedidos a serem arquivados:</span>
-                <span className="font-bold text-zinc-200">
+                <span className="font-bold text-ink">
                   {allOrders.filter((o) => ["finalizado", "cancelado"].includes(o.status)).length} pedidos
                 </span>
               </div>
@@ -993,70 +852,70 @@ export default function GestaoBalcaoPage() {
             <div className="flex gap-2.5">
               <button
                 onClick={() => setIsCloseShiftOpen(false)}
-                className="flex-1 h-11 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition-colors"
+                className="flex-1 h-11 rounded-2xl bg-raised hover:bg-line-strong text-ink font-bold text-xs transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCloseShift}
                 disabled={loadingAction}
-                className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black text-xs transition-colors shadow-lg shadow-red-500/20"
+                className="flex-1 h-11 rounded-2xl bg-danger hover:bg-danger text-white font-black text-xs transition-colors "
               >
                 {loadingAction ? "Arquivando..." : "Sim, Encerrar"}
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
 
       {/* Modal Atribuir Entregador (Issues #75 e #78) */}
       {selectedOrderForAssign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+        <Dialog label={`Atribuir entregador ao pedido ${selectedOrderForAssign.id}`} onClose={() => setSelectedOrderForAssign(null)}>
+          <div className="w-full max-w-md rounded-3xl bg-surface border border-line p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <Bike className="h-5 w-5 text-yellow-400" />
-                <h3 className="text-base font-bold text-zinc-100">
+                <Bike className="h-5 w-5 text-accent" />
+                <h3 className="text-base font-bold text-ink">
                   Despachar Pedido #{selectedOrderForAssign.id}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedOrderForAssign(null)}
-                className="rounded-lg p-1 text-zinc-500 hover:text-zinc-300"
+                className="rounded-lg p-1 text-muted hover:text-soft"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <p className="text-xs text-zinc-400 mb-3">
+            <p className="text-xs text-soft mb-3">
               Selecione um entregador próprio disponível (online e dentro do limite simultâneo):
             </p>
 
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {(!Array.isArray(entregadoresDisp) || entregadoresDisp.length === 0) ? (
-                <div className="p-4 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+                <div className="p-4 text-center text-xs text-muted border border-dashed border-line rounded-2xl">
                   Nenhum entregador cadastrado no sistema.
                 </div>
               ) : (
                 entregadoresDisp.map((ent: any) => (
                   <div
                     key={ent.id}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${
                       ent.disponivel_para_atribuir
-                        ? "border-zinc-800 bg-zinc-950/60 hover:border-yellow-400/50"
-                        : "border-zinc-900 bg-zinc-950/20 opacity-50"
+                        ? "border-line bg-canvas/60 hover:border-accent/50"
+                        : "border-line-strong bg-canvas/20 opacity-50"
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-zinc-100">{ent.nome}</span>
+                        <span className="font-bold text-sm text-ink">{ent.nome}</span>
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            ent.is_online ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+                            ent.is_online ? "bg-success" : "bg-line-strong"
                           }`}
                         />
                       </div>
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-soft">
                         {ent.is_online ? "Online" : "Offline / Em Pausa"} • {ent.entregas_ativas}/{ent.limite_maximo} ativas
                       </p>
                     </div>
@@ -1074,12 +933,12 @@ export default function GestaoBalcaoPage() {
                           setSelectedOrderForAssign(null);
                           showFeedback(`Pedido atribuído ao entregador ${ent.nome} com sucesso!`);
                         } catch (err: any) {
-                          notify(err.response?.data?.entregador_id || err.response?.data?.detail || "Erro ao atribuir entregador.");
+                          notify(apiErrorMessage(err, "Erro ao atribuir entregador."));
                         } finally {
                           setLoadingAction(false);
                         }
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-yellow-400 text-zinc-950 font-bold text-xs hover:bg-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                      className="px-3 py-1.5 rounded-xl bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed "
                     >
                       {loadingAction ? "Atribuindo..." : "Selecionar"}
                     </button>
@@ -1091,13 +950,13 @@ export default function GestaoBalcaoPage() {
             <div className="mt-5 flex justify-end">
               <button
                 onClick={() => setSelectedOrderForAssign(null)}
-                className="px-4 py-2 rounded-xl border border-zinc-700 text-zinc-300 text-xs font-semibold hover:bg-zinc-800"
+                className="px-4 py-2 rounded-xl border border-line text-soft text-xs font-semibold hover:bg-raised"
               >
                 Fechar
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import { buttonClass } from "@/components/ui/button"
+import { apiErrorMessage } from "@/lib/errors"
 import { 
   ShieldCheck, 
   KeyRound, 
@@ -13,9 +15,11 @@ import {
   Lock,
   Sparkles,
   Users,
-  Shield
+  Shield,
+  Check
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { PageHeader, StatStrip } from "@/components/ui/blocks";
 import api from "@/services/api";
 
 interface RoleOption {
@@ -55,7 +59,7 @@ export default function PermissoesPage() {
       setMatrixData(res.data);
     } catch (err: any) {
       console.error("Erro ao buscar matriz de permissões:", err);
-      showToast("error", err.response?.data?.detail || "Erro ao carregar matriz de permissões.");
+      showToast("error", apiErrorMessage(err, "Erro ao carregar matriz de permissões."));
     } finally {
       setLoading(false);
     }
@@ -127,7 +131,7 @@ export default function PermissoesPage() {
           })),
         };
       });
-      showToast("error", err.response?.data?.detail || "Falha ao atualizar permissão no servidor.");
+      showToast("error", apiErrorMessage(err, "Falha ao atualizar permissão no servidor."));
     } finally {
       setUpdatingKey(null);
     }
@@ -164,56 +168,40 @@ export default function PermissoesPage() {
   }, [matrixData]);
 
   const roleColors: Record<string, string> = {
-    administrador: "bg-red-500/10 text-red-400 border-red-500/30",
-    atendente: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-    cozinheiro: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-    entregador: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-    cliente: "bg-zinc-800 text-zinc-300 border-zinc-700",
+    administrador: "bg-danger/10 text-danger border-danger/30",
+    atendente: "bg-info/10 text-info border-info/30",
+    cozinheiro: "bg-warn/10 text-warn border-warn/30",
+    entregador: "bg-success/10 text-success border-success/30",
+    cliente: "bg-raised text-soft border-line",
   };
 
   return (
     <AuthGuard allowedRoles={["administrador"]}>
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-zinc-950 p-6 text-zinc-100">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-canvas p-6 text-ink">
         <div className="mx-auto w-full max-w-7xl space-y-6 pb-12">
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-yellow-400/20 bg-yellow-400/10 text-yellow-400 shadow-lg shadow-yellow-400/10">
-                <ShieldCheck className="h-6 w-6" />
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold tracking-tight text-zinc-50">
-                    Matriz de Permissões (RBAC)
-                  </h1>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-2 py-0.5 text-xs font-bold text-yellow-400">
-                    <Sparkles className="h-3 w-3" /> Dinâmico
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-400">
-                  Controle granular de acessos por perfil. As alterações entram em vigor instantaneamente em todo o ERP.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={fetchMatrix}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-zinc-300 transition-all hover:border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100 active:scale-95 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-yellow-400" : ""}`} />
-              Atualizar Matriz
-            </button>
-          </div>
+          <PageHeader
+            title="Permissões"
+            description="Quem pode fazer o quê em cada perfil. Cada alteração vale na hora, em todo o sistema."
+            actions={
+              <button
+                type="button"
+                onClick={fetchMatrix}
+                disabled={loading}
+                className={buttonClass("outline")}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-accent" : ""}`} />
+                Atualizar
+              </button>
+            }
+          />
 
           {/* Toast de Feedback */}
           {toastMessage && (
             <div
-              className={`flex items-center gap-3 rounded-2xl border p-4 text-xs font-medium transition-all animate-in fade-in slide-in-from-top-2 duration-300 ${
+              className={`flex items-center gap-3 rounded-2xl border p-4 text-xs font-medium transition-colors    duration-300 ${
                 toastMessage.type === "success"
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                  : "border-red-500/30 bg-red-500/10 text-red-400"
+                  ? "border-success/30 bg-success/10 text-success"
+                  : "border-danger/30 bg-danger/10 text-danger"
               }`}
             >
               {toastMessage.type === "success" ? (
@@ -225,98 +213,61 @@ export default function PermissoesPage() {
             </div>
           )}
 
-          {/* Cards de Resumo */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-              <div className="flex items-center justify-between text-zinc-400">
-                <span className="text-xs font-medium">Perfis Mapeados</span>
-                <Users className="h-4 w-4 text-yellow-400" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">
-                {matrixData?.roles.length || 0} <span className="text-xs font-normal text-zinc-500">roles</span>
-              </p>
-              <p className="mt-1 text-xs text-zinc-400">Admin, Atendente, Cozinheiro, Entregador e Cliente</p>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-              <div className="flex items-center justify-between text-zinc-400">
-                <span className="text-xs font-medium">Ações Granulares</span>
-                <KeyRound className="h-4 w-4 text-yellow-400" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">
-                {totalPermissoes} <span className="text-xs font-normal text-zinc-500">permissões</span>
-              </p>
-              <p className="mt-1 text-xs text-zinc-400">Distribuídas em módulos operacionais e administrativos</p>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-              <div className="flex items-center justify-between text-zinc-400">
-                <span className="text-xs font-medium">Segurança da API</span>
-                <Shield className="h-4 w-4 text-emerald-400" />
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-sm font-bold text-emerald-400">Guards Ativos (403)</span>
-              </div>
-              <p className="mt-1 text-xs text-zinc-400">Bloqueio tanto no Frontend quanto nas Views do Backend</p>
-            </div>
-          </div>
+          <StatStrip
+            items={[
+              { label: "Perfis", value: matrixData?.roles.length || 0, hint: "Administrador, atendente, cozinheiro, entregador e cliente" },
+              { label: "Permissões", value: totalPermissoes, hint: "Ações que podem ser liberadas ou bloqueadas" },
+              { label: "Bloqueio no servidor", value: "Ativo", hint: "A API recusa com erro 403 mesmo se a tela for burlada", tone: "success" },
+            ]}
+          />
 
           {/* Barra de Busca e Filtro */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
                 type="text"
-                placeholder="Buscar funcionalidade, código ou módulo..."
+                placeholder="Buscar permissão, código ou módulo"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/70 py-2.5 pl-10 pr-4 text-xs text-zinc-100 placeholder-zinc-500 transition-colors focus:border-yellow-400 focus:outline-none focus:ring-1 focus:ring-yellow-400/30"
+                aria-label="Buscar permissão"
+                className="h-10 w-full rounded-lg border border-line-strong bg-canvas pl-10 pr-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
               />
             </div>
           </div>
 
           {/* Tabela Matriz */}
           {loading && !matrixData ? (
-            <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin text-yellow-400" />
-              <p className="mt-3 text-xs font-semibold text-zinc-400">Carregando matriz de permissões do sistema...</p>
+            <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
+              <RefreshCw className="h-8 w-8 animate-spin text-accent" />
+              <p className="mt-3 text-xs font-semibold text-soft">Carregando matriz de permissões do sistema...</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/70 shadow-xl shadow-black/40">
+            <div className="overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-zinc-800 bg-zinc-950/80">
-                      <th className="min-w-[280px] p-4 font-semibold text-zinc-300">
+                    <tr className="border-b-2 border-ink">
+                      <th className="min-w-[280px] p-3 text-sm font-bold text-ink">
                         Funcionalidade / Ação
                       </th>
                       {matrixData?.roles.map((r) => (
-                        <th key={r.key} className="min-w-[120px] p-4 text-center font-semibold">
-                          <span
-                            className={`inline-block rounded-lg border px-2.5 py-1 text-xs font-bold capitalize ${
-                              roleColors[r.key] || "border-zinc-700 bg-zinc-800 text-zinc-300"
-                            }`}
-                          >
-                            {r.label}
-                          </span>
+                        <th key={r.key} className="min-w-[110px] p-3 text-center text-sm font-bold text-ink">
+                          {r.label}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
+                  <tbody className="divide-y divide-line">
                     {filteredModulos.map((mod) => (
                       <React.Fragment key={mod.modulo}>
                         {/* Header do Módulo */}
-                        <tr className="bg-zinc-900/90">
+                        <tr>
                           <td
                             colSpan={(matrixData?.roles.length || 0) + 1}
-                            className="p-3 text-xs font-black uppercase tracking-wider text-yellow-400"
+                            className="pb-2 pt-6 font-display text-2xl text-ink"
                           >
-                            <div className="flex items-center gap-2">
-                              <Sliders className="h-3.5 w-3.5" />
-                              Módulo: {mod.modulo}
-                            </div>
+                            {({ ADMINISTRACAO: "Administração", INVENTARIO: "Estoque", FINANCEIRO: "Financeiro", PEDIDOS: "Pedidos" } as Record<string, string>)[mod.modulo] ?? mod.modulo.charAt(0) + mod.modulo.slice(1).toLowerCase()}
                           </td>
                         </tr>
 
@@ -324,18 +275,14 @@ export default function PermissoesPage() {
                         {mod.permissoes.map((perm) => (
                           <tr
                             key={perm.codigo}
-                            className="transition-colors hover:bg-zinc-800/30"
+                            className="transition-colors hover:bg-raised/30"
                           >
-                            <td className="p-4 align-middle">
+                            <td className="p-3 align-middle">
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs font-bold text-zinc-100">
-                                    {perm.codigo}
-                                  </span>
+                                  <span className="text-sm font-semibold text-ink">{perm.descricao}</span>
                                 </div>
-                                <span className="text-xs text-zinc-400">
-                                  {perm.descricao}
-                                </span>
+                                <span className="text-xs text-muted">{perm.codigo}</span>
                               </div>
                             </td>
 
@@ -347,10 +294,13 @@ export default function PermissoesPage() {
                               const isReadonly = !!role.readonly;
 
                               return (
-                                <td key={role.key} className="p-4 text-center align-middle">
+                                <td key={role.key} className="p-3 text-center align-middle">
                                   <div className="flex items-center justify-center">
                                     <button
                                       type="button"
+                                      role="switch"
+                                      aria-checked={hasPerm}
+                                      aria-label={`${perm.descricao} para ${role.label}`}
                                       disabled={isUpdating || isLocked || isReadonly}
                                       onClick={() => handleToggle(role.key, perm.codigo, hasPerm)}
                                       title={
@@ -359,37 +309,22 @@ export default function PermissoesPage() {
                                           : isLocked
                                           ? "Permissão essencial e obrigatória para o Administrador"
                                           : hasPerm
-                                          ? `Revogar ${perm.codigo} de ${role.label}`
-                                          : `Conceder ${perm.codigo} para ${role.label}`
+                                          ? `Revogar de ${role.label}`
+                                          : `Conceder a ${role.label}`
                                       }
-                                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-zinc-950 ${
-                                        isReadonly
-                                          ? "cursor-not-allowed bg-zinc-800 opacity-50"
-                                          : isLocked
-                                          ? "cursor-not-allowed bg-yellow-400/40 opacity-70"
-                                          : isUpdating
-                                          ? "bg-zinc-700 opacity-60"
-                                          : hasPerm
-                                          ? "bg-yellow-400"
-                                          : "bg-zinc-800 hover:bg-zinc-700"
-                                      }`}
+                                      className={`flex h-8 w-8 items-center justify-center rounded-md border-2 transition-colors disabled:cursor-not-allowed ${
+                                        hasPerm
+                                          ? "border-accent bg-accent text-accent-ink"
+                                          : "border-line-strong bg-transparent text-transparent hover:border-ink"
+                                      } ${isReadonly || isLocked ? "opacity-50" : ""}`}
                                     >
-                                      <span className="sr-only">Alternar permissão</span>
-                                      <span
-                                        className={`pointer-events-none flex h-5 w-5 transform items-center justify-center rounded-full bg-zinc-950 shadow-md ring-0 transition duration-200 ease-in-out ${
-                                          hasPerm ? "translate-x-5" : "translate-x-0"
-                                        }`}
-                                      >
-                                        {isLocked ? (
-                                          <Lock className="h-2.5 w-2.5 text-yellow-400" />
-                                        ) : isUpdating ? (
-                                          <RefreshCw className="h-2.5 w-2.5 animate-spin text-zinc-400" />
-                                        ) : hasPerm ? (
-                                          <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                                        ) : (
-                                          <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                                        )}
-                                      </span>
+                                      {isLocked ? (
+                                        <Lock className="h-4 w-4" />
+                                      ) : isUpdating ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin text-soft" />
+                                      ) : (
+                                        <Check className="h-5 w-5" strokeWidth={3} />
+                                      )}
                                     </button>
                                   </div>
                                 </td>
@@ -404,7 +339,7 @@ export default function PermissoesPage() {
               </div>
 
               {filteredModulos.length === 0 && (
-                <div className="p-8 text-center text-xs text-zinc-500">
+                <div className="p-8 text-center text-xs text-muted">
                   Nenhuma permissão encontrada com o termo &quot;{searchTerm}&quot;.
                 </div>
               )}
@@ -412,10 +347,9 @@ export default function PermissoesPage() {
           )}
 
           {/* Dica de Boas Práticas */}
-          <div className="flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 text-xs text-zinc-400">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+          <div className="flex items-start gap-3 border-t border-dashed border-line pt-4 text-sm text-soft">
             <div className="space-y-1">
-              <p className="font-semibold text-zinc-200">Como funciona o controle de RBAC no ERP:</p>
+              <p className="font-semibold text-ink">Como funciona</p>
               <p>
                 Quando você altera um botão nesta matriz, o vínculo é imediatamente persistido no banco de dados. 
                 Os validadores de segurança no Backend rejeitarão qualquer chamada com código <strong>403 Forbidden</strong> caso o perfil não possua acesso. 

@@ -28,6 +28,9 @@ export function middleware(request: NextRequest) {
     "/cliente",
     "/recuperar-senha",
     "/manifest.json",
+    "/manifest.webmanifest",
+    "/icon-",
+    "/favicon",
   ];
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
@@ -102,6 +105,6 @@ export const config = {
      * - _next/image (arquivos de otimização de imagem)
      * - favicon.ico, manifest.json, ícones
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json|icon-).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|favicon.svg|manifest.json|manifest.webmanifest|icon-).*)",
   ],
 };
