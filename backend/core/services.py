@@ -99,6 +99,33 @@ NOME_ESTABELECIMENTO_CHAVE = 'NOME_ESTABELECIMENTO'
 NOME_ESTABELECIMENTO_PADRAO = 'PL Lanchonete & Pastelaria'
 
 
+# Dados operacionais do estabelecimento (todos editáveis em Configurações e lidos pelo cardápio/cupom)
+ESTABELECIMENTO_CAMPOS = {
+    'telefone': ('TELEFONE', ''),
+    'endereco': ('ENDERECO', ''),
+    'cnpj': ('CNPJ', ''),
+    'taxa_entrega': ('TAXA_ENTREGA', '0.00'),
+    'tempo_entrega': ('TEMPO_ENTREGA', ''),
+    'tempo_retirada': ('TEMPO_RETIRADA', ''),
+    'pedido_minimo': ('PEDIDO_MINIMO', '0.00'),
+    'aceita_pedidos_online': ('ACEITA_PEDIDOS_ONLINE', 'true'),
+}
+
+
+def dados_estabelecimento() -> dict:
+    valores = {campo: obter_configuracao(chave, padrao) for campo, (chave, padrao) in ESTABELECIMENTO_CAMPOS.items()}
+    valores['aceita_pedidos_online'] = valores['aceita_pedidos_online'].strip().lower() == 'true'
+    return valores
+
+
+def obter_decimal_configuracao(campo: str) -> Decimal:
+    chave, padrao = ESTABELECIMENTO_CAMPOS[campo]
+    try:
+        return Decimal(obter_configuracao(chave, padrao) or '0')
+    except Exception:
+        return Decimal('0')
+
+
 def obter_nome_estabelecimento() -> str:
     return obter_configuracao(NOME_ESTABELECIMENTO_CHAVE, NOME_ESTABELECIMENTO_PADRAO)
 

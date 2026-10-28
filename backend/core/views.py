@@ -7,7 +7,9 @@ from .models import Turno, Auditoria, Configuracao
 from .serializers import TurnoSerializer, AuditoriaSerializer, ConfiguracaoSerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from .services import iniciar_turno, encerrar_turno, confirmar_acerto_caixa, executar_rpa, obter_nome_estabelecimento, registrar_auditoria, NOME_ESTABELECIMENTO_CHAVE
+from rest_framework.parsers import MultiPartParser, FormParser
+from . import branding
+from .services import iniciar_turno, encerrar_turno, confirmar_acerto_caixa, executar_rpa, obter_nome_estabelecimento, registrar_auditoria, NOME_ESTABELECIMENTO_CHAVE, dados_estabelecimento, ESTABELECIMENTO_CAMPOS
 from users.permissions import IsFuncionario, IsAdministrador, tem_permissao
 from users.models import Perfil
 
@@ -123,23 +125,81 @@ class EstabelecimentoView(APIView):
             return [AllowAny()]
         return [IsAdministrador()]
 
+    def _payload(self):
+        return {'nome': obter_nome_estabelecimento(), 'logo': branding.urls_logo(), **dados_estabelecimento()}
+
     def get(self, request):
-        return Response({'nome': obter_nome_estabelecimento()})
+        return Response(self._payload())
 
     def patch(self, request):
-        nome = str(request.data.get('nome', '')).strip()
-        if not 2 <= len(nome) <= 60:
-            return Response(
-                {'nome': 'Informe um nome entre 2 e 60 caracteres.'},
-                status=status.HTTP_400_BAD_REQUEST,
+        from decimal import Decimal, InvalidOperation
+
+        erros, novos = {}, {}
+        if 'nome' in request.data:
+            nome = str(request.data.get('nome', '')).strip()
+            if not 2 <= len(nome) <= 60:
+                erros['nome'] = 'Informe um nome entre 2 e 60 caracteres.'
+            else:
+                novos[NOME_ESTABELECIMENTO_CHAVE] = nome
+        limites_texto = {'telefone': 30, 'endereco': 200, 'cnpj': 20, 'tempo_entrega': 20, 'tempo_retirada': 20}
+        for campo, limite in limites_texto.items():
+            if campo in request.data:
+                valor = str(request.data.get(campo) or '').strip()
+                if len(valor) > limite:
+                    erros[campo] = f'Use no máximo {limite} caracteres.'
+                else:
+                    novos[ESTABELECIMENTO_CAMPOS[campo][0]] = valor
+        for campo, maximo in {'taxa_entrega': Decimal('999'), 'pedido_minimo': Decimal('9999')}.items():
+            if campo in request.data:
+                try:
+                    valor = Decimal(str(request.data.get(campo)).replace(',', '.'))
+                    if valor < 0 or valor > maximo:
+                        raise InvalidOperation
+                    novos[ESTABELECIMENTO_CAMPOS[campo][0]] = f'{valor:.2f}'
+                except (InvalidOperation, ValueError):
+                    erros[campo] = f'Informe um valor entre 0 e {maximo}.'
+        if 'aceita_pedidos_online' in request.data:
+            bruto = request.data.get('aceita_pedidos_online')
+            ativo = bruto is True or str(bruto).strip().lower() in ('true', '1', 'sim')
+            novos[ESTABELECIMENTO_CAMPOS['aceita_pedidos_online'][0]] = 'true' if ativo else 'false'
+        if erros:
+            return Response(erros, status=status.HTTP_400_BAD_REQUEST)
+
+        nome_anterior = obter_nome_estabelecimento()
+        for chave, valor in novos.items():
+            Configuracao.objects.update_or_create(chave=chave, defaults={'valor': valor})
+        if NOME_ESTABELECIMENTO_CHAVE in novos and novos[NOME_ESTABELECIMENTO_CHAVE] != nome_anterior:
+            registrar_auditoria(
+                request.user, 'ALTEROU_NOME_ESTABELECIMENTO', 'sys_configuracao', 0,
+                f'Nome alterado de "{nome_anterior}" para "{novos[NOME_ESTABELECIMENTO_CHAVE]}"',
             )
-        anterior = obter_nome_estabelecimento()
-        Configuracao.objects.update_or_create(
-            chave=NOME_ESTABELECIMENTO_CHAVE,
-            defaults={'valor': nome, 'descricao': 'Nome exibido no sistema, cardápio e cupons'},
-        )
-        registrar_auditoria(
-            request.user, 'ALTEROU_NOME_ESTABELECIMENTO', 'sys_configuracao', 0,
-            f'Nome alterado de "{anterior}" para "{nome}"',
-        )
-        return Response({'nome': nome})
+        outros = sorted(k for k in novos if k != NOME_ESTABELECIMENTO_CHAVE)
+        if outros:
+            registrar_auditoria(
+                request.user, 'ALTEROU_DADOS_ESTABELECIMENTO', 'sys_configuracao', 0,
+                'Campos alterados: ' + ', '.join(outros),
+            )
+        return Response(self._payload())
+
+
+class EstabelecimentoLogoView(APIView):
+    """Envio (POST) e remocao (DELETE) da logo do estabelecimento; somente administrador."""
+
+    permission_classes = [IsAdministrador]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        arquivo = request.FILES.get('logo')
+        if not arquivo:
+            return Response({'logo': 'Selecione uma imagem.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            branding.salvar_logo(arquivo)
+        except branding.LogoInvalida as e:
+            return Response({'logo': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(request.user, 'ALTEROU_LOGO_ESTABELECIMENTO', 'sys_configuracao', 0, 'Logo enviada')
+        return Response({'nome': obter_nome_estabelecimento(), 'logo': branding.urls_logo()})
+
+    def delete(self, request):
+        branding.remover_logo()
+        registrar_auditoria(request.user, 'ALTEROU_LOGO_ESTABELECIMENTO', 'sys_configuracao', 0, 'Logo removida (padrão restaurado)')
+        return Response({'nome': obter_nome_estabelecimento(), 'logo': None})

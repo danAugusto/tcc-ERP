@@ -1,5 +1,6 @@
 """Views do modulo de pedidos."""
 
+from decimal import Decimal
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -26,8 +27,19 @@ class PedidoListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         if is_equipe(self.request.user):
             serializer.save()
-        else:
-            serializer.save(cliente=self.request.user)
+            return
+        # Pedido feito pelo app do cliente: respeita as regras definidas em Configurações
+        from core.services import dados_estabelecimento, obter_decimal_configuracao
+        if not dados_estabelecimento()['aceita_pedidos_online']:
+            raise ValidationError('A loja não está recebendo pedidos pelo aplicativo agora. Tente mais tarde.')
+        minimo = obter_decimal_configuracao('pedido_minimo')
+        subtotal = sum(
+            (item['produto'].preco * item['quantidade'] for item in serializer.validated_data.get('itens', [])),
+            Decimal('0'),
+        )
+        if minimo > 0 and subtotal < minimo:
+            raise ValidationError(f'O pedido mínimo é de R$ {minimo:.2f}'.replace('.', ',') + '.')
+        serializer.save(cliente=self.request.user)
 
 
 class PedidoDetailView(generics.RetrieveUpdateDestroyAPIView):

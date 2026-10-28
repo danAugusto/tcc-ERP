@@ -43,7 +43,7 @@ def validar_transicao(pedido, novo_status):
 
 def recalcular_total(pedido):
     """Recalcula o total do pedido a partir dos itens e persiste."""
-    total = sum(item.subtotal for item in pedido.itens.all())
+    total = sum(item.subtotal for item in pedido.itens.all()) + (pedido.taxa_entrega or 0)
     pedido.total = total
     pedido.save(update_fields=['total', 'updated_at'])
     return pedido.total

@@ -98,6 +98,12 @@ class Pedido(models.Model):
         default='outros',
         verbose_name='forma de pagamento',
     )
+    taxa_entrega = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name='taxa de entrega',
+    )
     valor_recebido = models.DecimalField(
         max_digits=12,
         decimal_places=2,

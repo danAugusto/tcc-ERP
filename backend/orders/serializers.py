@@ -81,6 +81,7 @@ class PedidoSerializer(serializers.ModelSerializer):
             'motivo_falha_entrega',
             'itens',
             'endereco',
+            'taxa_entrega',
             'total',
             'payment_method',
             'valor_recebido',
@@ -94,6 +95,7 @@ class PedidoSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             'id',
+            'taxa_entrega',
             'total',
             'confirmed_at',
             'cancelled_at',
@@ -170,6 +172,8 @@ class PedidoSerializer(serializers.ModelSerializer):
                 validated_data['numero_mesa'] = 'Delivery'
             if not validated_data.get('codigo_pin_entrega'):
                 validated_data['codigo_pin_entrega'] = f"{random.randint(1000, 9999):04d}"
+            from core.services import obter_decimal_configuracao
+            validated_data['taxa_entrega'] = obter_decimal_configuracao('taxa_entrega')
         elif tipo == 'retirada' and not validated_data.get('numero_mesa'):
             validated_data['numero_mesa'] = 'Retirada'
 

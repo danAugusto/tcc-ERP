@@ -29,3 +29,8 @@ frontend/next-env.d.ts
 # Backups locais
 backups/
 !.env.prod.example
+
+# Ferramentas locais do assistente e material de apoio
+.claude/
+skills/
+images/

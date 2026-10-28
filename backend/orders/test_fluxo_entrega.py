@@ -336,3 +336,37 @@ class VisibilidadeTests(FluxoBase):
         self.como(self.atendente)
         ids = {p['id'] for p in self.client.get(reverse('orders:pedido_list_create')).data['results']}
         self.assertTrue({a, b} <= ids)
+
+
+class RegrasDaLojaTests(FluxoBase):
+    def configurar(self, **valores):
+        from core.models import Configuracao
+        from core.services import ESTABELECIMENTO_CAMPOS
+        for campo, valor in valores.items():
+            Configuracao.objects.update_or_create(chave=ESTABELECIMENTO_CAMPOS[campo][0], defaults={'valor': valor})
+
+    def test_taxa_de_entrega_entra_no_total_do_delivery(self):
+        self.configurar(taxa_entrega='6.50')
+        pid = self.novo_pedido(qty=2)  # 2 x 20,00
+        p = Pedido.objects.get(pk=pid)
+        self.assertEqual(str(p.taxa_entrega), '6.50')
+        self.assertEqual(str(p.total), '46.50')
+        mesa = self.novo_pedido(user=self.atendente, tipo='mesa')
+        self.assertEqual(str(Pedido.objects.get(pk=mesa).total), '20.00')
+
+    def test_loja_fechada_recusa_pedido_do_app_mas_nao_do_balcao(self):
+        self.configurar(aceita_pedidos_online='false')
+        self.como(self.cliente)
+        payload = self._pedido_payload(self.product, 1)
+        r = self.client.post(reverse('orders:pedido_list_create'), payload, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.novo_pedido(user=self.atendente, tipo='mesa')
+
+    def test_pedido_minimo_no_app(self):
+        self.configurar(pedido_minimo='50.00')
+        self.como(self.cliente)
+        r = self.client.post(reverse('orders:pedido_list_create'), self._pedido_payload(self.product, 2), format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('mínimo', str(r.data))
+        ok = self.client.post(reverse('orders:pedido_list_create'), self._pedido_payload(self.product, 3), format='json')
+        self.assertEqual(ok.status_code, 201)
