@@ -9,7 +9,7 @@ Use **duas janelas/dispositivos** (ex.: PC = gestão/cozinha, celular = cliente/
 
 | Verificação | Resultado |
 |---|---|
-| Suíte do backend (`manage.py test`) | ✅ 163 testes OK |
+| Suíte do backend (`manage.py test`) | ✅ 172 testes OK |
 | `tsc --noEmit` (frontend) e `next build` na imagem de produção | ✅ |
 | `makemigrations --check` | ✅ sem migrations pendentes |
 | `check --deploy` com `DEBUG=False` + HTTPS | ✅ só avisa HSTS/SSL redirect (tratados pelo Caddy e por `HSTS_SECONDS`) |
@@ -97,6 +97,65 @@ Novas solicitações atendidas: **nome do estabelecimento vindo do banco** (Conf
 | 3.14 | Cliente só lista/abre os próprios pedidos (o alheio dá 404); equipe vê todos | ✅ |
 
 O que continua **só no olho**: a aparência das telas, mensagens de erro exibidas ao operador e o fluxo no celular do entregador.
+
+
+## Rodada 3 — visual novo, tema claro e logo (22/10/2026)
+
+Pré-verificações já feitas: `tsc`, build de produção, 6 telas nos dois temas, pares de cor (WCAG AA), logo enviada ponta a ponta
+(upload → menu, favicon, manifest e ícones 192/512) e restaurada ao padrão; backend com testes de upload/validação/permissão da logo.
+
+| # | Teste | Esperado | Resultado |
+|---|---|---|---|
+| R3.1 | Alternar tema (sol/lua no menu, login e cardápio) e recarregar a página | Tema é lembrado; sem "flash" do tema errado; todas as telas legíveis nos dois | |
+| R3.2 | Percorrer todas as telas nos dois temas (painel, PDV, gestão, cozinha, financeiro, estoque, cardápio, equipe, permissões, automações, configurações, login, cardápio do cliente, entregador) | Sem texto invisível, sem sobreposição, sem barra de rolagem dupla | |
+| R3.3 | Cozinha: ler a tela a ~2 metros | Número da comanda e itens legíveis; coluna "No fogo" destaca o que está sendo feito | |
+| R3.4 | PDV no tablet/toque: tocar rápido várias vezes no mesmo produto | Todas as unidades entram na comanda; contador no produto acompanha | |
+| R3.5 | Configurações → enviar logo PNG (fundo transparente) | Logo aparece dentro do quadrado (menu, login, cardápio); aba do navegador muda | |
+| R3.6 | Enviar GIF, PDF ou imagem acima de 2 MB | Mensagem de erro clara; logo anterior mantida | |
+| R3.7 | "Restaurar ícone padrão" | Volta ao chapéu de cozinheiro | |
+| R3.8 | Celular: abrir `/cliente` e (com HTTPS) instalar o app | Ícone instalado é a logo enviada | |
+| R3.9 | Celular (375 px): cardápio, carrinho, entregador | Sem rolagem horizontal; botões com área de toque confortável | |
+| R3.10 | Entregador ao sol (brilho alto) | Cartão de entrega (papel claro) legível | |
+| R3.11 | Navegar só com teclado (Tab/Enter) no login, PDV e cardápio | Foco sempre visível; é possível concluir um pedido | |
+| R3.12 | Cupom do cliente com logo enviada, na impressora térmica 58 e 80 mm | Logo preto e branco no topo, nítida e centralizada (logos escuras imprimem melhor; amarelas viram pontilhado leve); via da cozinha sem logo | |
+| R3.13 | Primeira visita com o aparelho no modo claro e no escuro (sem escolha salva) | O tema inicial acompanha o aparelho; o botão sol/lua sobrepõe e é lembrado | |
+| R3.14 | Tema claro com logo amarela/colorida | Quadrado da marca branco com borda; a logo não some | |
+
+
+## Rodada 4 — responsivo, diálogos e mensagens de erro (P0/P1 da avaliação)
+
+Já verificado em navegador emulado: menu em gaveta (celular), PDV com barra "Comanda" (tablet 768 px), cozinha em 3 colunas no tablet,
+diálogo de pagamento (foco entra, Tab circula dentro, Esc fecha e devolve o foco), folha de produto do cliente, campos com 16 px em toque,
+tradução de erros da API (sem JSON cru). Falta confirmar em aparelho real.
+
+| # | Teste | Esperado | Resultado |
+|---|---|---|---|
+| R4.1 | Celular: entrar como admin/atendente | Barra superior com ☰; menu abre como gaveta, fecha ao tocar fora, em Esc ou ao navegar | |
+| R4.2 | Tablet em pé (balcão): PDV | Produtos ocupam a tela; barra amarela "Comanda · N itens · total" abre a comanda; "Voltar aos produtos" retorna | |
+| R4.3 | Tablet em pé: cozinha | Três colunas lado a lado (Na fila / No fogo / Prontos) | |
+| R4.4 | iPhone: tocar em campos (busca, valor recebido, observações) | A tela **não** dá zoom | |
+| R4.5 | iPhone com "notch"/indicador: cardápio do cliente e app do entregador | Barra inferior e botões não ficam sob o indicador; nada escondido atrás da barra do carrinho | |
+| R4.6 | Teclado: abrir qualquer modal (pagamento, cancelar, lançamento, insumo, produto...) | Foco vai para dentro, Tab não sai do modal, Esc fecha e o foco volta ao botão que abriu | |
+| R4.7 | Leitor de tela (NVDA/VoiceOver) em um modal | Anuncia como diálogo com o título certo | |
+| R4.8 | Provocar erros: valor inválido, campo vazio, servidor desligado, 11 logins errados | Mensagens em português com o que fazer (ex.: "Categoria: este campo é obrigatório", "Sem conexão com o servidor…", "Muitas tentativas…") | |
+| R4.9 | Sistema com "reduzir movimento" ligado | Modais e gaveta aparecem com esmaecimento simples, sem deslizar/escalar; nada pisca continuamente | |
+| R4.10 | Barra do sistema do celular (Android) nos dois temas | Cor acompanha o tema (preto/branco) | |
+
+
+## Rodada 5 — acabamento (P2/P3 da avaliação) e dados reais da loja
+
+| # | Teste | Esperado | Resultado |
+|---|---|---|---|
+| R5.1 | Configurações → Estabelecimento: preencher telefone, endereço e CNPJ; salvar | Aparecem no cupom do cliente; com CNPJ vazio o cupom não mostra CNPJ | |
+| R5.2 | Configurações → Pedidos e entrega: taxa R$ 6,50, tempo "30–40 min" | No app do cliente, "Entrega" mostra "R$ 6,50 · 30–40 min"; o total do delivery soma a taxa (inclusive no balcão/PDV) e o cupom mostra a linha "Taxa de entrega" | |
+| R5.3 | Pedido mínimo R$ 50 e carrinho de R$ 34 no app | Aviso "Faltam R$ 16,00" e botão bloqueado; o servidor também recusa | |
+| R5.4 | Desligar "Aceitar pedidos pelo aplicativo" | Cardápio aparece, mas o cliente não consegue enviar; o balcão continua normal | |
+| R5.5 | Pagamento no app do cliente | Não pede dados de cartão; pagamento é feito na entrega/retirada (Pix, cartão na maquininha ou dinheiro) | |
+| R5.6 | Menu lateral | Grupos Operação / Gestão / Aplicativos / Sistema, sem siglas; cada perfil vê só os seus grupos | |
+| R5.7 | Cozinha com pedido antigo | Tempo como "2 d 3 h" (não "2933 min") | |
+| R5.8 | Entregador e gestão | Valores com vírgula (R$ 45,00) | |
+| R5.9 | Tocar em botões e produtos (PDV/cardápio) | Leve "afundada" ao toque; nada pisca continuamente | |
+| R5.10 | Painel, financeiro, permissões e automações | Totais como rodapé de comanda (rótulo · pontilhado · valor) | |
 
 ## 0. Infra e segurança básica (homologação)
 | # | Passo | Esperado | Resultado |
