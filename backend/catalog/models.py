@@ -29,6 +29,7 @@ class Produto(models.Model):
         related_name='produtos',
     )
     disponibilidade = models.BooleanField(default=True)
+    imagem = models.ImageField(upload_to='produtos/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

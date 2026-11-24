@@ -1,0 +1,39 @@
+# SITE_ADDRESS: ":80" (HTTP) | "https://192.168.0.50" ou dominio (HTTPS)
+# TLS_DIRECTIVE: vazio (Let's Encrypt automatico para dominios) | "tls internal" (CA interna do Caddy, para IP/LAN)
+{$SITE_ADDRESS::80} {
+	{$TLS_DIRECTIVE}
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Ignorado pelo navegador em HTTP puro; vale quando o site e servido por HTTPS
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Limite de upload (imagens de produtos: ate 5 MB + multipart)
+	request_body {
+		max_size 12MB
+	}
+
+	# Uploads servidos direto do volume compartilhado
+	handle /media/* {
+		root * /srv
+		file_server
+	}
+
+	# API Django, admin e estaticos do admin (whitenoise)
+	@backend path /api/* /admin/* /static/*
+	handle @backend {
+		reverse_proxy backend:8000
+	}
+
+	# Todo o resto: aplicacao Next.js
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

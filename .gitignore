@@ -10,7 +10,7 @@ venv/
 # Django local configuration
 .env
 .env.*
-!env.example
+!.env.example
 staticfiles/
 media/
 
@@ -19,3 +19,22 @@ media/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+
+# Backups locais
+backups/
+!.env.prod.example
+
+# Ferramentas locais do assistente e material de apoio
+.claude/
+skills/
+images/
+
+# Artefatos de cobertura e resultados gerados pela APS
+.coverage
+backend/aps_qualidade/resultados/

@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+/*
+ * Identidade: balcão de lanchonete.
+ * Escuro = quadro de preços (preto + amarelo-letreiro). Claro = comanda em papel branco com tinta azul.
+ * Use SEMPRE os tokens semânticos (canvas, surface, ink, accent...) e nunca cores literais:
+ * é isso que permite a troca de tema e, no futuro, a escolha de cores por empresa em Configurações.
+ */
+:root,
+[data-theme="dark"] {
+  --c-canvas: #000000;
+  --c-surface: #0d0d0d;
+  --c-raised: #1a1a1a;
+  --c-line: #2a2a2a;
+  --c-line-strong: #454545;
+  --c-ink: #f5f5f2;
+  --c-soft: #bcbcb6;
+  --c-muted: #8f8f89;
+  --c-faint: #7d7d77;
+  --c-accent: #ffd21f;
+  --c-accent-hover: #ffe14d;
+  --c-accent-ink: #000000;
+  --c-danger: #ff5a4d;
+  --c-success: #3ddc84;
+  --c-warn: #ff9f1c;
+  --c-info: #5aa9ff;
+  /* Papel térmico da comanda: o ticket é claro sobre o preto, para ler de longe */
+  --c-paper: #f1f1ec;
+  --c-paper-ink: #0a0a0a;
+  --c-paper-muted: #55554f;
+  --c-paper-line: #b9b9b0;
+  --c-paper-danger: #c4271a;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --c-canvas: #ffffff;
+  --c-surface: #f4f6fa;
+  --c-raised: #e7ebf3;
+  --c-line: #d3dae8;
+  --c-line-strong: #aab6cf;
+  --c-ink: #0a1230;
+  --c-soft: #36415f;
+  --c-muted: #566282;
+  --c-faint: #67728f;
+  --c-accent: #0f2f8f;
+  --c-accent-hover: #1b3fa8;
+  --c-accent-ink: #ffffff;
+  --c-danger: #c62828;
+  --c-success: #17794a;
+  --c-warn: #b25e09;
+  --c-info: #1a5fd1;
+  --c-paper: #f4f6fa;
+  --c-paper-ink: #0a1230;
+  --c-paper-muted: #566282;
+  --c-paper-line: #aab6cf;
+  --c-paper-danger: #c62828;
+  color-scheme: light;
+}
+
+/* Variante para estilos que valem só no tema claro: light:bg-white */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-raised: var(--c-raised);
+  --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
+  --color-ink: var(--c-ink);
+  --color-soft: var(--c-soft);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+  --color-accent: var(--c-accent);
+  --color-accent-hover: var(--c-accent-hover);
+  --color-accent-ink: var(--c-accent-ink);
+  --color-danger: var(--c-danger);
+  --color-success: var(--c-success);
+  --color-warn: var(--c-warn);
+  --color-info: var(--c-info);
+  --color-paper: var(--c-paper);
+  --color-paper-ink: var(--c-paper-ink);
+  --color-paper-muted: var(--c-paper-muted);
+  --color-paper-line: var(--c-paper-line);
+  --color-paper-danger: var(--c-paper-danger);
+
+  --font-sans: var(--font-archivo), "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  /* Cantos pouco arredondados: o mesmo raio em tudo achata a hierarquia, então a escala é curta e baixa */
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.3125rem;
+  --radius-2xl: 0.375rem;
+  --radius-3xl: 0.5rem;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Toque: sem atraso de duplo toque e sem selecionar texto de botão ao segurar */
+  button,
+  a,
+  [role="button"],
+  [role="tab"] {
+    touch-action: manipulation;
+  }
+  button,
+  [role="button"],
+  [role="tab"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Em telas de toque, campos com menos de 16px fazem o iOS dar zoom ao focar */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--c-canvas);
+    color: var(--c-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Títulos em extracondensado, como letras de letreiro */
+  h1,
+  h2,
+  h3 {
+    font-variation-settings: "wdth" 68;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: 0.005em;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-line-strong) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--c-line-strong);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Foco visível para navegação por teclado em qualquer controle sem estilo próprio */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--c-accent);
+    color: var(--c-accent-ink);
+  }
+}
+
+/* Números grandes (senha da comanda, preços, totais): largura mínima, peso máximo */
+@utility font-display {
+  font-variation-settings: "wdth" 62;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+/* Comanda de papel: bordas serrilhadas (picote) em cima e embaixo */
+@utility ticket {
+  position: relative;
+  background-color: var(--c-paper);
+  color: var(--c-paper-ink);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background-image: radial-gradient(circle at 6px 0, var(--c-canvas) 4px, transparent 4.5px);
+    background-size: 12px 8px;
+    background-repeat: repeat-x;
+  }
+  &::before {
+    top: 0;
+  }
+  &::after {
+    bottom: 0;
+    transform: scaleY(-1);
+  }
+}
+
+/* Movimento reduzido: tira deslocamentos e escalas, mas mantém os esmaecimentos e mudanças de cor que
+   comunicam estado (um corte seco esconde o que mudou). Animações contínuas param. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-property: opacity, color, background-color, border-color, outline-color !important;
+  }
+}
+

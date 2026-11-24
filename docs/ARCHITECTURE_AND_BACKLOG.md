@@ -21,9 +21,9 @@ backend/                 Django, DRF, CRUD, regras de negócio e testes
   users/                 Login local, perfil e autorização
   catalog/               Esqueleto de categorias, produtos e cardápio
   inventory/             Futuro: insumos, saldo, alertas e movimentações
-  orders/                Futuro: pedidos e itens de pedido
+  orders/                Pedidos e itens de pedido
   preparation/           Futuro: fila de cozinha, status e FIFO
-  finance/               Futuro: registros financeiros
+  finance/               Registros financeiros
 frontend/                Interface web futura
   src/components/        Componentes reutilizáveis
   src/screens/           Telas públicas e internas
@@ -33,7 +33,7 @@ infrastructure/          Materiais de ambiente e operação futuros
 .github/workflows/       CI executado pelo GitHub Actions
 ```
 
-Regra direta: CRUD e qualquer regra de backend pertencem a `backend/`; telas e integrações do navegador pertencem a `frontend/`. Hoje existem apenas os apps `users` e `catalog`; `catalog` é o esqueleto da próxima issue. `inventory`, `orders`, `preparation` e `finance` são módulos aprovados, mas só serão criados quando suas issues começarem.
+Regra direta: CRUD e qualquer regra de backend pertencem a `backend/`; telas e integrações do navegador pertencem a `frontend/`. Hoje existem os apps `users`, `catalog`, `finance` e `orders` (mínimo). `catalog` é o esqueleto da próxima issue; `inventory` e `preparation` são módulos aprovados, mas só serão criados quando suas issues começarem.
 
 Essa divisão protege responsabilidades: `catalog` descreve o que é vendido; `inventory` controla insumos e movimentações; `orders` registra o pedido; `preparation` cuida da fila e da ordenação FIFO; e `finance` concentra lançamentos financeiros. A sequência recomendada mantém as dependências claras: perfis → catálogo e inventário → pedidos → preparo/FIFO → baixa de estoque e financeiro.
 

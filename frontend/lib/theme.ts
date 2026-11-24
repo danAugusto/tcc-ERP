@@ -1,0 +1,2 @@
+/** Script inline (antes da hidratação) que aplica o tema salvo, evitando o "flash" do tema errado. */
+export const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark')t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}`
